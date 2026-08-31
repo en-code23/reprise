@@ -40,7 +40,7 @@
           <h1>Pick up exactly<br />where you left off.</h1>
           <p>
             Drop a terminal screenshot on your menubar. Reprise finds the Codex,
-            Claude, or Grok resume command and keeps it beside the project it belongs to.
+            Claude, or Grok resume command, records its directory, and keeps both beside the project they belong to.
           </p>
           <div class="hero-actions">
             <a class="download-button" data-download href="https://github.com/en-code23/reprise/releases/latest">
@@ -67,11 +67,11 @@
             <div class="drop-preview">
               <div class="screen-thumb">
                 <div class="screen-bar"><i></i><i></i><i></i></div>
-                <code><span>~/billing</span><br />$ codex --resume<br /><em>"019cba47-918e…"</em></code>
+                <code><span>~/Developer/billing</span><br />$ codex resume<br /><em>019cba47-918e…</em></code>
                 <div class="scan"></div>
               </div>
-              <div class="detect-copy"><span class="check">✓</span><div><b>Resume command detected</b><small>Codex · Billing portal</small></div><mark>AUTO</mark></div>
-              <div class="command-pill"><span>$</span><code>codex --resume "019cba47…"</code><button data-copy-demo aria-label="Copy example command">⧉</button></div>
+              <div class="detect-copy"><span class="check">✓</span><div><b>Command and directory detected</b><small>Codex · ~/Developer/billing</small></div><mark>AUTO</mark></div>
+              <div class="command-pill"><span>$</span><code>codex resume 019cba47…</code><button data-copy-demo aria-label="Copy example command">⧉</button></div>
             </div>
             <div class="popover-foot"><span><i></i> Stored only on this Mac</span><button>Save to Library</button></div>
           </div>
@@ -88,8 +88,8 @@
             <div class="library-main">
               <div class="library-title"><div><b>Resume library</b><small>6 saved sessions</small></div><button>Capture session</button></div>
               <div class="group-label"><span>C</span><b>Codex</b><small>3</small></div>
-              <div class="session-line"><div><b>Billing portal</b><small>Stripe webhook retries</small></div><code>$ codex --resume "019cba47…"</code><span>11h ago</span></div>
-              <div class="session-line"><div><b>Search indexing</b><small>Incremental sync</small></div><code>$ codex --resume "019cb5ec…"</code><span>Yesterday</span></div>
+              <div class="session-line"><div><b>Billing portal</b><small>~/Developer/billing</small></div><code>$ codex resume 019cba47…</code><span>11h ago</span></div>
+              <div class="session-line"><div><b>Search indexing</b><small>~/Work/search-index</small></div><code>$ codex resume 019cb5ec…</code><span>Yesterday</span></div>
             </div>
           </div>
         </div>
@@ -119,13 +119,13 @@
           </article>
           <article>
             <span>2</span>
-            <div class="step-visual read-visual"><code>$ claude --resume<br /><b>"4d4e9441-f029…"</b></code><div class="reader-line"></div><mark>VISION OCR</mark></div>
+            <div class="step-visual read-visual"><code><b>~/Developer/onboarding</b><br />$ claude resume<br />4d4e9441-f029…</code><div class="reader-line"></div><mark>VISION OCR</mark></div>
             <h3>Reprise reads it locally</h3>
-            <p>Apple Vision detects the assistant and resume command without an upload.</p>
+            <p>Apple Vision detects the assistant, resume command, and working directory without an upload.</p>
           </article>
           <article>
             <span>3</span>
-            <div class="step-visual save-visual"><div><small>PROJECT</small><b>iOS onboarding</b></div><code>claude --resume "4d4…"</code><button>Copy</button></div>
+            <div class="step-visual save-visual"><div><small>PROJECT · DIRECTORY</small><b>iOS onboarding</b><small>~/Developer/onboarding</small></div><code>claude resume 4d4…</code><button>Copy</button></div>
             <h3>Return whenever you’re ready</h3>
             <p>Find it by assistant or project, then copy the exact command in one click.</p>
           </article>

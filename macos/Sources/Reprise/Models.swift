@@ -38,6 +38,7 @@ struct ResumeSession: Identifiable, Codable, Hashable, Sendable {
     let id: UUID
     var model: AssistantModel
     var project: String
+    var projectDirectory: String?
     var note: String
     var command: String
     var createdAt: Date
@@ -48,6 +49,7 @@ struct ResumeSession: Identifiable, Codable, Hashable, Sendable {
         id: UUID = UUID(),
         model: AssistantModel,
         project: String,
+        projectDirectory: String? = nil,
         note: String,
         command: String,
         createdAt: Date = .now,
@@ -57,6 +59,7 @@ struct ResumeSession: Identifiable, Codable, Hashable, Sendable {
         self.id = id
         self.model = model
         self.project = project
+        self.projectDirectory = projectDirectory
         self.note = note
         self.command = command
         self.createdAt = createdAt
@@ -68,6 +71,7 @@ struct ResumeSession: Identifiable, Codable, Hashable, Sendable {
 struct ParsedResumeCommand: Sendable {
     var model: AssistantModel
     var command: String
+    var projectDirectory: String?
     var wasDetected: Bool
 }
 
@@ -79,6 +83,7 @@ enum CommandParser {
             .replacingOccurrences(of: "‘", with: "'")
             .replacingOccurrences(of: "’", with: "'")
         let lower = normalized.lowercased()
+        let projectDirectory = detectProjectDirectory(in: normalized)
         let detectedModel: AssistantModel
 
         if lower.contains("claude") || lower.contains("anthropic") {
@@ -104,7 +109,8 @@ enum CommandParser {
             let model = AssistantModel(rawValue: tool) ?? detectedModel
             return ParsedResumeCommand(
                 model: model,
-                command: "\(tool) --resume \"\(identifier)\"",
+                command: "\(tool) resume \(identifier)",
+                projectDirectory: projectDirectory,
                 wasDetected: true
             )
         }
@@ -120,11 +126,87 @@ enum CommandParser {
             let identifier = String(normalized[idRange])
             return ParsedResumeCommand(
                 model: detectedModel,
-                command: "\(detectedModel.commandName) --resume \"\(identifier)\"",
+                command: "\(detectedModel.commandName) resume \(identifier)",
+                projectDirectory: projectDirectory,
                 wasDetected: true
             )
         }
 
-        return ParsedResumeCommand(model: detectedModel, command: "", wasDetected: false)
+        return ParsedResumeCommand(
+            model: detectedModel,
+            command: "",
+            projectDirectory: projectDirectory,
+            wasDetected: false
+        )
+    }
+
+    static func canonicalize(_ command: String) -> String {
+        let trimmed = command.trimmingCharacters(in: .whitespacesAndNewlines)
+        let pattern = #"(?i)^(codex|claude|grok)\s+(?:--resume|resume)\s+[\"']?([A-Za-z0-9_./:@-]+)[\"']?$"#
+        guard let expression = try? NSRegularExpression(pattern: pattern),
+              let match = expression.firstMatch(
+                  in: trimmed,
+                  range: NSRange(trimmed.startIndex..., in: trimmed)
+              ),
+              let toolRange = Range(match.range(at: 1), in: trimmed),
+              let idRange = Range(match.range(at: 2), in: trimmed) else {
+            return trimmed
+        }
+
+        return "\(trimmed[toolRange].lowercased()) resume \(trimmed[idRange])"
+    }
+
+    static func detectProjectDirectory(in text: String) -> String? {
+        let lines = text.components(separatedBy: .newlines)
+
+        for (index, line) in lines.enumerated() {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            let command = trimmed
+                .replacingOccurrences(of: #"^[>$#%]\s*"#, with: "", options: .regularExpression)
+                .lowercased()
+            guard command == "pwd", lines.indices.contains(index + 1) else { continue }
+            let candidate = lines[index + 1].trimmingCharacters(in: .whitespacesAndNewlines)
+            if candidate.hasPrefix("/") || candidate.hasPrefix("~/") {
+                return cleanDirectory(candidate)
+            }
+        }
+
+        for (index, line) in lines.enumerated() where lines.indices.contains(index + 1) {
+            let candidate = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            let followingLine = lines[index + 1].lowercased()
+            let isStandalonePath = (candidate.hasPrefix("/") || candidate.hasPrefix("~/"))
+                && !candidate.contains(where: { $0.isWhitespace })
+            let precedesResumeCommand = ["codex", "claude", "grok"].contains {
+                followingLine.contains($0) && followingLine.contains("resume")
+            }
+            if isStandalonePath && precedesResumeCommand {
+                return cleanDirectory(candidate)
+            }
+        }
+
+        let promptPatterns = [
+            #"(?m)((?:~|/)[^\s$%#>]+)\s*[$%#>]"#,
+            #"(?m)^\s*➜\s+([^\s]+)"#
+        ]
+
+        for pattern in promptPatterns {
+            guard let expression = try? NSRegularExpression(pattern: pattern),
+                  let match = expression.firstMatch(
+                      in: text,
+                      range: NSRange(text.startIndex..., in: text)
+                  ),
+                  let range = Range(match.range(at: 1), in: text) else { continue }
+            let candidate = cleanDirectory(String(text[range]))
+            if !candidate.isEmpty { return candidate }
+        }
+
+        return nil
+    }
+
+    private static func cleanDirectory(_ value: String) -> String {
+        value.trimmingCharacters(
+            in: CharacterSet.whitespacesAndNewlines
+                .union(CharacterSet(charactersIn: "\"'`"))
+        )
     }
 }

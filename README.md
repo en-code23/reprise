@@ -5,12 +5,12 @@ Reprise is a native macOS menubar app that turns terminal screenshots into an or
 Drop a screenshot on the Reprise status icon. Apple Vision OCR detects commands such as:
 
 ```sh
-codex --resume "session-id"
-claude --resume "session-id"
-grok --resume "session-id"
+codex resume session-id
+claude resume session-id
+grok resume session-id
 ```
 
-The app lets you review the detected assistant and command, add a project name and note, then copy the command later from a grouped local library. Screenshots are processed on-device and are never uploaded.
+The app lets you review the detected assistant and command, add or detect the project directory, attach a project name and note, then copy the command later from a grouped local library. Screenshots are processed on-device and are never uploaded.
 
 ## Requirements
 

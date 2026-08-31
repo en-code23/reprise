@@ -192,7 +192,7 @@ struct CapturePopoverView: View {
                                 Text("$")
                                     .foregroundStyle(Color.repriseGreen)
                                 TextField(
-                                    "\(coordinator.model.commandName) --resume \"session-id\"",
+                                    "\(coordinator.model.commandName) resume session-id",
                                     text: $coordinator.command
                                 )
                                 .textFieldStyle(.plain)
@@ -208,6 +208,19 @@ struct CapturePopoverView: View {
 
                 FieldLabel("PROJECT NAME") {
                     TextField("Billing portal", text: $coordinator.project)
+                }
+
+                FieldLabel("PROJECT DIRECTORY · OPTIONAL") {
+                    HStack(spacing: 7) {
+                        Image(systemName: "folder")
+                            .foregroundStyle(.secondary)
+                        TextField("~/Developer/billing-portal", text: $coordinator.projectDirectory)
+                            .textFieldStyle(.plain)
+                    }
+                    .font(.system(size: 10, design: .monospaced))
+                    .padding(.horizontal, 8)
+                    .frame(height: 30)
+                    .background(.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 6))
                 }
 
                 FieldLabel("PROJECT NOTE · OPTIONAL") {

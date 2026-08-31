@@ -56,7 +56,13 @@ struct LibraryView: View {
             case .all: true
             case .model(let model): session.model == model
             }
-            let haystack = [session.project, session.note, session.command, session.model.displayName]
+            let haystack = [
+                session.project,
+                session.projectDirectory ?? "",
+                session.note,
+                session.command,
+                session.model.displayName
+            ]
                 .joined(separator: " ")
                 .lowercased()
             return matchesFilter && (needle.isEmpty || haystack.contains(needle))
@@ -264,12 +270,18 @@ private struct SessionLibraryRow: View {
                 Text(session.project)
                     .font(.system(size: 12, weight: .semibold))
                     .lineLimit(1)
+                if let directory = session.projectDirectory, !directory.isEmpty {
+                    Label(directory, systemImage: "folder")
+                        .font(.system(size: 8, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
                 Text(session.note.isEmpty ? "No project note" : session.note)
-                    .font(.system(size: 9))
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 8))
+                    .foregroundStyle(.tertiary)
                     .lineLimit(1)
             }
-            .frame(minWidth: 160, maxWidth: 220, alignment: .leading)
+            .frame(minWidth: 180, maxWidth: 240, alignment: .leading)
 
             HStack(spacing: 8) {
                 Text("$")
@@ -308,7 +320,7 @@ private struct SessionLibraryRow: View {
             .help("Delete session")
         }
         .padding(.horizontal, 14)
-        .frame(minHeight: 66)
+        .frame(minHeight: 74)
         .contextMenu {
             Button("Copy Command", action: copy)
             Button("Delete Session", role: .destructive, action: delete)

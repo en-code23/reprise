@@ -28,7 +28,7 @@ async function wireLatestRelease() {
 document.querySelector("[data-copy-demo]")?.addEventListener("click", async (event) => {
   const button = event.currentTarget;
   try {
-    await navigator.clipboard.writeText('codex --resume "019cba47-918e"');
+    await navigator.clipboard.writeText("codex resume 019cba47-918e");
     button.textContent = "✓";
     window.setTimeout(() => { button.textContent = "⧉"; }, 1400);
   } catch {

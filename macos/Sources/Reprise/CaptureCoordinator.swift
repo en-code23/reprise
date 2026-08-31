@@ -15,6 +15,7 @@ final class CaptureCoordinator: ObservableObject {
     @Published var model: AssistantModel = .codex
     @Published var command = ""
     @Published var project = ""
+    @Published var projectDirectory = ""
     @Published var note = ""
     @Published var detectedAutomatically = false
     @Published var errorMessage: String?
@@ -63,6 +64,7 @@ final class CaptureCoordinator: ObservableObject {
                 let parsed = CommandParser.parse(text)
                 model = parsed.model
                 command = parsed.command
+                projectDirectory = parsed.projectDirectory ?? ""
                 detectedAutomatically = parsed.wasDetected
                 if !parsed.wasDetected {
                     errorMessage = "The resume command needs a quick manual check."
@@ -86,6 +88,7 @@ final class CaptureCoordinator: ObservableObject {
             project: project.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 ? "Untitled project"
                 : project.trimmingCharacters(in: .whitespacesAndNewlines),
+            projectDirectory: normalizedDirectory,
             note: note.trimmingCharacters(in: .whitespacesAndNewlines),
             command: command.trimmingCharacters(in: .whitespacesAndNewlines),
             sourceFileName: sourceURL?.lastPathComponent,
@@ -101,6 +104,7 @@ final class CaptureCoordinator: ObservableObject {
         model = .codex
         command = ""
         project = ""
+        projectDirectory = ""
         note = ""
         detectedAutomatically = false
         errorMessage = nil
@@ -122,5 +126,10 @@ final class CaptureCoordinator: ObservableObject {
             options: .regularExpression
         )
         return name.isEmpty ? "Untitled project" : name
+    }
+
+    private var normalizedDirectory: String? {
+        let value = projectDirectory.trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? nil : value
     }
 }

@@ -13,6 +13,11 @@ let package = Package(
         .executableTarget(
             name: "Reprise",
             path: "Sources/Reprise"
+        ),
+        .testTarget(
+            name: "RepriseTests",
+            dependencies: ["Reprise"],
+            path: "Tests/RepriseTests"
         )
     ]
 )

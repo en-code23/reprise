@@ -40,6 +40,7 @@ type Session = {
   id: string;
   model: Model;
   project: string;
+  projectDirectory: string;
   description: string;
   command: string;
   createdAt: string;
@@ -50,6 +51,7 @@ type Session = {
 type CaptureDraft = {
   model: Model;
   project: string;
+  projectDirectory: string;
   description: string;
   command: string;
 };
@@ -57,10 +59,10 @@ type CaptureDraft = {
 const MODELS: Model[] = ["Codex", "Claude", "Grok", "Other"];
 
 const MODEL_META: Record<Model, { mark: string; tone: string; hint: string }> = {
-  Codex: { mark: "C", tone: "codex", hint: "codex --resume" },
-  Claude: { mark: "A", tone: "claude", hint: "claude --resume" },
-  Grok: { mark: "G", tone: "grok", hint: "grok --resume" },
-  Other: { mark: ">", tone: "other", hint: "tool --resume" },
+  Codex: { mark: "C", tone: "codex", hint: "codex resume" },
+  Claude: { mark: "A", tone: "claude", hint: "claude resume" },
+  Grok: { mark: "G", tone: "grok", hint: "grok resume" },
+  Other: { mark: ">", tone: "other", hint: "tool resume" },
 };
 
 const SAMPLE_SESSIONS: Session[] = [
@@ -68,8 +70,9 @@ const SAMPLE_SESSIONS: Session[] = [
     id: "seed-1",
     model: "Codex",
     project: "Billing portal",
+    projectDirectory: "~/Developer/billing-portal",
     description: "Stripe webhook retries and the failed payment timeline.",
-    command: 'codex --resume "019cba47-918e-7ca2-85b8-cc71d11a5e42"',
+    command: "codex resume 019cba47-918e-7ca2-85b8-cc71d11a5e42",
     createdAt: "2026-08-30T08:42:00.000Z",
     sourceName: "terminal-billing.png",
     detected: true,
@@ -78,8 +81,9 @@ const SAMPLE_SESSIONS: Session[] = [
     id: "seed-2",
     model: "Codex",
     project: "Search indexing",
+    projectDirectory: "~/Work/search-index",
     description: "Continue profiling the incremental Meilisearch sync.",
-    command: 'codex --resume "019cb5ec-e7ff-7ce0-842b-29b566f95c4c"',
+    command: "codex resume 019cb5ec-e7ff-7ce0-842b-29b566f95c4c",
     createdAt: "2026-08-29T15:17:00.000Z",
     detected: true,
   },
@@ -87,8 +91,9 @@ const SAMPLE_SESSIONS: Session[] = [
     id: "seed-3",
     model: "Claude",
     project: "iOS onboarding",
+    projectDirectory: "~/Developer/onboarding-ios",
     description: "Refine passkey setup and error recovery states.",
-    command: 'claude --resume "4d4e9441-f029-4275-82e5-5d904ba427e6"',
+    command: "claude resume 4d4e9441-f029-4275-82e5-5d904ba427e6",
     createdAt: "2026-08-28T12:04:00.000Z",
     sourceName: "Screenshot 2026-08-28.png",
     detected: true,
@@ -97,8 +102,9 @@ const SAMPLE_SESSIONS: Session[] = [
     id: "seed-4",
     model: "Grok",
     project: "Deploy monitor",
+    projectDirectory: "~/Work/deploy-monitor",
     description: "Investigate the production health-check timeout.",
-    command: 'grok --resume "session_b97d0043f6"',
+    command: "grok resume session_b97d0043f6",
     createdAt: "2026-08-27T19:31:00.000Z",
     detected: false,
   },
@@ -107,6 +113,7 @@ const SAMPLE_SESSIONS: Session[] = [
 const EMPTY_DRAFT: CaptureDraft = {
   model: "Codex",
   project: "",
+  projectDirectory: "",
   description: "",
   command: "",
 };
@@ -138,19 +145,26 @@ function extractCommand(text: string, model: Model): string {
   const lines = normalized.split("\n").map((line) => line.trim());
   const tool = model === "Other" ? "(?:codex|claude|grok|[a-z][\\w.-]+)" : model.toLowerCase();
   const commandPattern = new RegExp(
-    `(?:^|[>$#]\\s*)(${tool}\\s+(?:--resume|resume)\\s+(?:["']?[\\w./:@-]+["']?))`,
+    `(?:^|[>$#%]\\s*)(${tool})\\s+(?:--resume|resume)\\s+["']?([\\w./:@-]+)["']?`,
     "i",
   );
 
   for (const line of lines) {
     const match = line.match(commandPattern);
-    if (match) return match[1].replace(/\s+/g, " ").trim();
+    if (match) return `${match[1].toLowerCase()} resume ${match[2]}`;
   }
 
   const idPattern = /(?:resume|session(?:\s+id)?)\s*[:=#-]?\s*["']?([a-z0-9][\w-]{7,})["']?/i;
   const id = normalized.match(idPattern)?.[1];
   if (!id || model === "Other") return "";
-  return `${model.toLowerCase()} --resume "${id}"`;
+  return `${model.toLowerCase()} resume ${id}`;
+}
+
+function extractDirectory(text: string): string {
+  const pwd = text.match(/(?:^|\n)\s*(?:[$>#%]\s*)?pwd\s*\n\s*((?:~|\/)[^\s]+)/i)?.[1];
+  if (pwd) return pwd.replace(/["'`]+$/g, "");
+  const prompt = text.match(/((?:~|\/)[^\s$%#>]+)\s*[$%#>]/m)?.[1];
+  return prompt?.replace(/["'`]+$/g, "") ?? "";
 }
 
 function relativeDate(value: string): string {
@@ -245,7 +259,7 @@ function App() {
       const modelMatch = filter === "All" || session.model === filter;
       const textMatch =
         !needle ||
-        [session.project, session.description, session.command, session.model]
+        [session.project, session.projectDirectory, session.description, session.command, session.model]
           .join(" ")
           .toLowerCase()
           .includes(needle);
@@ -420,7 +434,7 @@ function App() {
                           <span className="folder-icon"><FolderKanban size={16} /></span>
                           <div>
                             <h3>{session.project}</h3>
-                            <p>{session.description || "No project notes yet."}</p>
+                            <p title={session.description}>{session.projectDirectory || session.description || "No project directory yet."}</p>
                           </div>
                         </div>
                         <div className="command-capsule">
@@ -560,6 +574,7 @@ function CaptureDialog({
         model,
         command,
         project: nextFile.name.replace(/\.(png|jpe?g|webp)$/i, "").replace(/^screenshot[\s_-]*/i, ""),
+        projectDirectory: extractDirectory(text),
       }));
       setDetected(Boolean(command && model !== "Other"));
       setProgress(100);
@@ -686,6 +701,10 @@ function CaptureDialog({
               <label>
                 <span>Project name</span>
                 <input value={draft.project} onChange={(event) => setDraft({ ...draft, project: event.target.value })} placeholder="e.g. Billing portal" />
+              </label>
+              <label>
+                <span>Project directory <em>Optional</em></span>
+                <input value={draft.projectDirectory} onChange={(event) => setDraft({ ...draft, projectDirectory: event.target.value })} placeholder="~/Developer/billing-portal" />
               </label>
               <label>
                 <span>Project note <em>Optional</em></span>
