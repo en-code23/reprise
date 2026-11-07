@@ -1,5 +1,11 @@
 # Release notes
 
+## 1.2.1
+
+- Choose a persistent default terminal from the library sidebar or menubar menu: Apple Terminal, Ghostty, or iTerm2.
+- Resume actions show the selected app and open a new window in the project directory. Ghostty uses its native surface configuration API and requires version 1.3 or later.
+- Report a missing app, unsupported Ghostty version, or denied Automation permission instead of silently using another terminal.
+
 ## 1.2.0
 
 - Organise the library by project directory instead of repeating the project name for every session. Codex and Claude sessions share one project row; different directories remain distinct even when their names match.

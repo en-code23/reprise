@@ -1,13 +1,15 @@
 import AppKit
 
 enum TerminalLaunchError: LocalizedError {
-    case missingDirectory, invalidDirectory, invalidCommand, automation(String)
+    case missingDirectory, invalidDirectory, invalidCommand, automation(String), notInstalled(String), oldGhostty
     var errorDescription: String? {
         switch self {
         case .missingDirectory: "Choose a project directory before resuming."
         case .invalidDirectory: "The project folder no longer exists. Choose its new location."
         case .invalidCommand: "Use a resume command with a single session ID. Shell scripts cannot be launched from Reprise."
-        case .automation(let message): "Terminal could not open: \(message). Allow Reprise to control Terminal in System Settings → Privacy & Security → Automation."
+        case .automation(let message): "\(message) Check System Settings → Privacy & Security → Automation and allow Reprise to control your selected terminal. For Ghostty, AppleScript must also be enabled in its configuration."
+        case .notInstalled(let name): "\(name) is not installed. Install it or choose another app under Default terminal."
+        case .oldGhostty: "Ghostty 1.3 or newer is required to resume sessions. Update Ghostty or choose another default terminal."
         }
     }
 }
@@ -36,13 +38,21 @@ enum TerminalCommand {
 
 @MainActor
 enum TerminalLauncher {
-    static func launch(_ session: ResumeSession) async throws {
+    static func launch(_ session: ResumeSession, terminal requestedTerminal: TerminalApp? = nil) async throws {
+        let terminal = requestedTerminal ?? TerminalPreference.selected()
         let command = try TerminalCommand.build(for: session)
+        guard let applicationURL = terminal.applicationURL else { throw TerminalLaunchError.notInstalled(terminal.name) }
+        if terminal == .ghostty,
+           let version = Bundle(url: applicationURL)?.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
+           version.compare("1.3.0", options: .numeric) == .orderedAscending {
+            throw TerminalLaunchError.oldGhostty
+        }
+        let directory = (session.projectDirectory! as NSString).expandingTildeInPath
         // Compile-time script, dynamic command supplied as argv rather than interpolated AppleScript.
         try await Task.detached(priority: .userInitiated) {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-            process.arguments = ["-e", "on run argv\ntell application \"Terminal\"\nactivate\ndo script (item 1 of argv)\nend tell\nend run", command]
+            process.arguments = ["-e", terminal.appleScript, command, directory]
             let errors = Pipe()
             process.standardError = errors
             process.standardOutput = FileHandle.nullDevice
@@ -50,7 +60,7 @@ enum TerminalLauncher {
             let data = errors.fileHandleForReading.readDataToEndOfFile()
             process.waitUntilExit()
             guard process.terminationStatus == 0 else {
-                throw TerminalLaunchError.automation(String(decoding: data, as: UTF8.self))
+                throw TerminalLaunchError.automation("\(terminal.name) could not open: " + String(decoding: data, as: UTF8.self))
             }
         }.value
     }

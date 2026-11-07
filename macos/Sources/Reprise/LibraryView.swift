@@ -38,6 +38,8 @@ struct LibraryView: View {
     @State private var launching = false
     @State private var copied = false
     @State private var showAllSessions = false
+    @AppStorage(TerminalPreference.key) private var terminalRaw = TerminalApp.terminal.rawValue
+    private var terminal: TerminalApp { TerminalApp(rawValue: terminalRaw) ?? .terminal }
 
     private var allGroups: [ProjectGroup] { ProjectLibrary.groups(store.sessions) }
     private var groups: [ProjectGroup] {
@@ -119,6 +121,10 @@ struct LibraryView: View {
                     Text(store.isSyncing ? "Syncing…" : "Saved on this Mac").font(.system(size: 11, weight: .medium))
                 }
                 Toggle("Auto-save sessions", isOn: $store.autoDiscovery).toggleStyle(.switch).controlSize(.mini).font(.system(size: 11))
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("DEFAULT TERMINAL").font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
+                    TerminalPreferencePicker().labelsHidden().font(.system(size: 12)).controlSize(.small)
+                }
                 HStack {
                     Button("Sync now") { Task { await store.sync() } }.disabled(store.isSyncing)
                     Spacer()
@@ -226,7 +232,7 @@ struct LibraryView: View {
                                 do { try await TerminalLauncher.launch(session) } catch { errorMessage = error.localizedDescription }
                             }
                         } label: {
-                            Label(project.directory == nil ? "Choose project folder" : launching ? "Opening Terminal…" : "Resume in Terminal", systemImage: "terminal")
+                            Label(project.directory == nil ? "Choose project folder" : launching ? "Opening \(terminal.name)…" : "Resume in \(terminal.name)", systemImage: "terminal")
                                 .font(.system(size: 13, weight: .semibold)).padding(.horizontal, 4).padding(.vertical, 5)
                         }.buttonStyle(.borderedProminent).tint(.repriseGreen).disabled(launching).keyboardShortcut(.return, modifiers: .command)
                         Button(copied ? "Copied" : "Copy command") {

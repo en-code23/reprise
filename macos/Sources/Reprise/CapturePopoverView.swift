@@ -266,6 +266,7 @@ struct CapturePopoverView: View {
             Button("Library", action: openLibrary).buttonStyle(.link)
             Menu {
                 Button("Open Library", action: openLibrary)
+                TerminalPreferencePicker()
                 Divider()
                 Button("Quit Reprise", action: quit)
                     .keyboardShortcut("q")
