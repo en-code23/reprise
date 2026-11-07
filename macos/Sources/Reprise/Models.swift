@@ -44,6 +44,7 @@ struct ResumeSession: Identifiable, Codable, Hashable, Sendable {
     var createdAt: Date
     var sourceFileName: String?
     var detectedAutomatically: Bool
+    var discoveryKey: String?
 
     init(
         id: UUID = UUID(),
@@ -66,6 +67,8 @@ struct ResumeSession: Identifiable, Codable, Hashable, Sendable {
         self.sourceFileName = sourceFileName
         self.detectedAutomatically = detectedAutomatically
     }
+
+    var identityKey: String { discoveryKey ?? "\(model.rawValue):\(CommandParser.canonicalize(command))" }
 }
 
 struct ParsedResumeCommand: Sendable {
@@ -109,7 +112,7 @@ enum CommandParser {
             let model = AssistantModel(rawValue: tool) ?? detectedModel
             return ParsedResumeCommand(
                 model: model,
-                command: "\(tool) resume \(identifier)",
+                command: resumeCommand(model: model, identifier: identifier),
                 projectDirectory: projectDirectory,
                 wasDetected: true
             )
@@ -126,7 +129,7 @@ enum CommandParser {
             let identifier = String(normalized[idRange])
             return ParsedResumeCommand(
                 model: detectedModel,
-                command: "\(detectedModel.commandName) resume \(identifier)",
+                command: resumeCommand(model: detectedModel, identifier: identifier),
                 projectDirectory: projectDirectory,
                 wasDetected: true
             )
@@ -153,7 +156,12 @@ enum CommandParser {
             return trimmed
         }
 
-        return "\(trimmed[toolRange].lowercased()) resume \(trimmed[idRange])"
+        let model = AssistantModel(rawValue: trimmed[toolRange].lowercased()) ?? .other
+        return resumeCommand(model: model, identifier: String(trimmed[idRange]))
+    }
+
+    static func resumeCommand(model: AssistantModel, identifier: String) -> String {
+        "\(model.commandName) \(model == .claude ? "--resume" : "resume") \(identifier)"
     }
 
     static func detectProjectDirectory(in text: String) -> String? {

@@ -39,9 +39,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.coordinator = coordinator
         self.libraryWindowController = library
         self.statusBarController = statusBar
+        store.startDiscovery()
+        library.show()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         store?.flush()
+        store?.stopDiscovery()
     }
 }

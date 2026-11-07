@@ -28,7 +28,7 @@ struct CapturePopoverView: View {
             Divider()
             footer
         }
-        .frame(width: 420, height: 520)
+        .frame(width: 480, height: 620)
         .background(Color.repriseSurface)
     }
 
@@ -43,7 +43,7 @@ struct CapturePopoverView: View {
                 Text("Reprise")
                     .font(.system(size: 13, weight: .semibold))
                 Text(headerSubtitle)
-                    .font(.system(size: 10))
+                    .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
 
@@ -83,9 +83,12 @@ struct CapturePopoverView: View {
                 chooseImage: coordinator.chooseImage
             )
 
+            Button("Enter a command manually") { coordinator.startManual() }
+                .buttonStyle(.link)
+
             if let error = coordinator.errorMessage {
                 Label(error, systemImage: "exclamationmark.circle")
-                    .font(.system(size: 10))
+                    .font(.system(size: 11))
                     .foregroundStyle(.red)
             }
 
@@ -93,13 +96,13 @@ struct CapturePopoverView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text("RECENT")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.system(size: 11, weight: .bold))
                             .tracking(0.8)
                             .foregroundStyle(.tertiary)
                         Spacer()
                         Button("Open library", action: openLibrary)
                             .buttonStyle(.link)
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(.system(size: 11, weight: .semibold))
                     }
 
                     ForEach(store.sessions.prefix(3)) { session in
@@ -129,7 +132,7 @@ struct CapturePopoverView: View {
                     Text("Finding the resume command…")
                         .font(.system(size: 12, weight: .semibold))
                     Text("Apple Vision is reading the screenshot on this Mac.")
-                        .font(.system(size: 10))
+                        .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -147,13 +150,13 @@ struct CapturePopoverView: View {
                     Spacer()
                     if coordinator.detectedAutomatically {
                         Text("AUTO")
-                            .font(.system(size: 8, weight: .bold))
+                            .font(.system(size: 11, weight: .bold))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 3)
                             .background(.white.opacity(0.6), in: Capsule())
                     }
                 }
-                .font(.system(size: 10, weight: .semibold))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(coordinator.detectedAutomatically ? Color.repriseGreen : Color.orange)
                 .padding(10)
                 .background(
@@ -164,7 +167,7 @@ struct CapturePopoverView: View {
 
                 if let error = coordinator.errorMessage {
                     Text(error)
-                        .font(.system(size: 10))
+                        .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                 }
 
@@ -182,29 +185,29 @@ struct CapturePopoverView: View {
                             .labelsHidden()
                             .frame(width: 132)
                         }
+                    }
+                }
 
                         VStack(alignment: .leading, spacing: 5) {
                             Text("RESUME COMMAND")
-                                .font(.system(size: 9, weight: .bold))
+                                .font(.system(size: 11, weight: .bold))
                                 .tracking(0.6)
                                 .foregroundStyle(.secondary)
                             HStack(spacing: 7) {
                                 Text("$")
                                     .foregroundStyle(Color.repriseGreen)
                                 TextField(
-                                    "\(coordinator.model.commandName) resume session-id",
+                                    CommandParser.resumeCommand(model: coordinator.model, identifier: "session-id"),
                                     text: $coordinator.command
                                 )
                                 .textFieldStyle(.plain)
                             }
-                            .font(.system(size: 10, design: .monospaced))
+                            .font(.system(size: 11, design: .monospaced))
                             .foregroundStyle(Color.repriseBone)
                             .padding(.horizontal, 10)
                             .frame(height: 34)
                             .background(Color.repriseTerminal, in: RoundedRectangle(cornerRadius: 7))
                         }
-                    }
-                }
 
                 FieldLabel("PROJECT NAME") {
                     TextField("Billing portal", text: $coordinator.project)
@@ -216,8 +219,9 @@ struct CapturePopoverView: View {
                             .foregroundStyle(.secondary)
                         TextField("~/Developer/billing-portal", text: $coordinator.projectDirectory)
                             .textFieldStyle(.plain)
+                        Button("Choose…") { coordinator.chooseDirectory() }
                     }
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(.system(size: 11, design: .monospaced))
                     .padding(.horizontal, 8)
                     .frame(height: 30)
                     .background(.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 6))
@@ -256,9 +260,10 @@ struct CapturePopoverView: View {
                 .fill(Color.repriseGreen)
                 .frame(width: 6, height: 6)
             Text("Stored only on this Mac")
-                .font(.system(size: 9))
+                .font(.system(size: 11))
                 .foregroundStyle(.secondary)
             Spacer()
+            Button("Library", action: openLibrary).buttonStyle(.link)
             Menu {
                 Button("Open Library", action: openLibrary)
                 Divider()
@@ -292,7 +297,7 @@ private struct DropTargetCard: View {
                 Text(isTargeted ? "Drop to read screenshot" : "Drop a terminal screenshot")
                     .font(.system(size: 13, weight: .semibold))
                 Text("Reprise detects Codex, Claude, and Grok commands.")
-                    .font(.system(size: 10))
+                    .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
 
@@ -301,7 +306,7 @@ private struct DropTargetCard: View {
                 .controlSize(.small)
 
             Text("PNG · JPG · HEIC · WEBP · TIFF")
-                .font(.system(size: 8, weight: .semibold))
+                .font(.system(size: 11, weight: .semibold))
                 .tracking(0.45)
                 .foregroundStyle(.tertiary)
         }
@@ -357,16 +362,16 @@ private struct CompactSessionRow: View {
     var body: some View {
         HStack(spacing: 9) {
             Image(systemName: session.model.symbol)
-                .font(.system(size: 10, weight: .semibold))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(session.model.tint)
                 .frame(width: 24, height: 24)
                 .background(.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
             VStack(alignment: .leading, spacing: 1) {
                 Text(session.project)
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold))
                     .lineLimit(1)
                 Text(session.command)
-                    .font(.system(size: 8, design: .monospaced))
+                    .font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -395,7 +400,7 @@ private struct FieldLabel<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(title)
-                .font(.system(size: 9, weight: .bold))
+                .font(.system(size: 11, weight: .bold))
                 .tracking(0.6)
                 .foregroundStyle(.secondary)
             content

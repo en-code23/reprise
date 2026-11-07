@@ -23,6 +23,7 @@ final class CaptureCoordinator: ObservableObject {
 
     private weak var store: SessionStore?
     private var sourceURL: URL?
+    private var captureTask: Task<Void, Never>?
 
     init(store: SessionStore) {
         self.store = store
@@ -30,6 +31,16 @@ final class CaptureCoordinator: ObservableObject {
 
     var canSave: Bool {
         !command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    func startManual() { reset(); phase = .review }
+
+    func chooseDirectory() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        if panel.runModal() == .OK { projectDirectory = panel.url?.path ?? projectDirectory }
     }
 
     func chooseImage() {
@@ -58,9 +69,10 @@ final class CaptureCoordinator: ObservableObject {
         project = suggestedProjectName(from: url)
         phase = .reading
 
-        Task {
+        captureTask = Task {
             do {
                 let text = try await OCRService.recognizeText(from: url)
+                guard !Task.isCancelled else { return }
                 let parsed = CommandParser.parse(text)
                 model = parsed.model
                 command = parsed.command
@@ -71,6 +83,7 @@ final class CaptureCoordinator: ObservableObject {
                 }
                 phase = .review
             } catch {
+                guard !Task.isCancelled else { return }
                 errorMessage = error.localizedDescription
                 phase = .review
             }
@@ -90,15 +103,18 @@ final class CaptureCoordinator: ObservableObject {
                 : project.trimmingCharacters(in: .whitespacesAndNewlines),
             projectDirectory: normalizedDirectory,
             note: note.trimmingCharacters(in: .whitespacesAndNewlines),
-            command: command.trimmingCharacters(in: .whitespacesAndNewlines),
+            command: CommandParser.canonicalize(command),
             sourceFileName: sourceURL?.lastPathComponent,
             detectedAutomatically: detectedAutomatically
         )
         store?.add(session)
-        reset()
+        if store?.storageError == nil { reset() }
+        else { errorMessage = store?.storageError }
     }
 
     func reset(keepingPhase: Bool = false) {
+        captureTask?.cancel()
+        captureTask = nil
         if !keepingPhase { phase = .idle }
         previewImage = nil
         model = .codex

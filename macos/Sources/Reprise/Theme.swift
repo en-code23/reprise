@@ -11,7 +11,11 @@ extension Color {
             ? NSColor(calibratedWhite: 0.145, alpha: 1)
             : NSColor(calibratedRed: 0.992, green: 0.988, blue: 0.975, alpha: 1)
     })
-    static let repriseGreen = Color(red: 0.20, green: 0.47, blue: 0.32)
+    static let repriseGreen = Color(nsColor: NSColor(name: nil) { appearance in
+        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            ? NSColor(calibratedRed: 0.46, green: 0.76, blue: 0.55, alpha: 1)
+            : NSColor(calibratedRed: 0.20, green: 0.47, blue: 0.32, alpha: 1)
+    })
     static let repriseTerminal = Color(red: 0.12, green: 0.135, blue: 0.12)
     static let repriseBone = Color(red: 0.94, green: 0.93, blue: 0.88)
 }

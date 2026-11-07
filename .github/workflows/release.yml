@@ -37,6 +37,9 @@ jobs:
           VERSION: ${{ steps.version.outputs.value }}
         run: ./scripts/build-release.sh
 
+      - name: Test native workflows
+        run: swift test --package-path macos
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:

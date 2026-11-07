@@ -13,7 +13,7 @@ final class CommandParserTests: XCTestCase {
         let parsed = CommandParser.parse("$ claude resume 4d4e9441-f029-4275")
 
         XCTAssertEqual(parsed.model, .claude)
-        XCTAssertEqual(parsed.command, "claude resume 4d4e9441-f029-4275")
+        XCTAssertEqual(parsed.command, "claude --resume 4d4e9441-f029-4275")
         XCTAssertTrue(parsed.wasDetected)
     }
 

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="${0:A:h:h}"
-VERSION="${VERSION:-1.0.0}"
+VERSION="${VERSION:-1.1.0}"
 SIGN_IDENTITY="${SIGN_IDENTITY:--}"
 DIST_DIR="$ROOT_DIR/dist"
 APP_DIR="$DIST_DIR/Reprise.app"
@@ -22,7 +22,7 @@ cp "$ICON_PATH" "$APP_DIR/Contents/Resources/AppIcon.icns"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${GITHUB_RUN_NUMBER:-1}" "$APP_DIR/Contents/Info.plist"
 
 xattr -cr "$APP_DIR"
-codesign --force --deep --options runtime --sign "$SIGN_IDENTITY" "$APP_DIR"
+codesign --force --deep --options runtime --entitlements "$ROOT_DIR/macos/Reprise.entitlements" --sign "$SIGN_IDENTITY" "$APP_DIR"
 codesign --verify --deep --strict --verbose=2 "$APP_DIR"
 
 ditto -c -k --sequesterRsrc --keepParent "$APP_DIR" "$DIST_DIR/Reprise-$VERSION-macOS.zip"

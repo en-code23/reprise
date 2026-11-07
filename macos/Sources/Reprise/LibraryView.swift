@@ -1,41 +1,24 @@
 import AppKit
 import SwiftUI
 
-private enum LibraryFilter: Hashable {
-    case all
-    case model(AssistantModel)
-}
-
 @MainActor
 final class LibraryWindowController: NSObject, NSWindowDelegate {
     var onNewCapture: (() -> Void)?
-
     private let store: SessionStore
     private var window: NSWindow?
-
-    init(store: SessionStore) {
-        self.store = store
-    }
-
+    init(store: SessionStore) { self.store = store }
     func show() {
         if window == nil {
-            let rootView = LibraryView(store: store) { [weak self] in
-                self?.onNewCapture?()
-            }
-            let hostingController = NSHostingController(rootView: rootView)
-            let window = NSWindow(contentViewController: hostingController)
-            window.title = "Reprise Library"
-            window.setContentSize(NSSize(width: 980, height: 640))
-            window.minSize = NSSize(width: 760, height: 500)
-            window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
-            window.titlebarAppearsTransparent = true
-            window.titleVisibility = .hidden
+            let controller = NSHostingController(rootView: LibraryView(store: store) { [weak self] in self?.onNewCapture?() })
+            let window = NSWindow(contentViewController: controller)
+            window.title = "Reprise — Session Library"
+            window.setContentSize(NSSize(width: 1120, height: 740))
+            window.minSize = NSSize(width: 920, height: 600)
+            window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
             window.isReleasedWhenClosed = false
             window.center()
-            window.delegate = self
             self.window = window
         }
-
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
     }
@@ -44,286 +27,206 @@ final class LibraryWindowController: NSObject, NSWindowDelegate {
 struct LibraryView: View {
     @ObservedObject var store: SessionStore
     let newCapture: () -> Void
-
-    @State private var filter: LibraryFilter = .all
     @State private var search = ""
-    @State private var copiedID: UUID?
-
-    private var filteredSessions: [ResumeSession] {
-        let needle = search.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return store.sessions.filter { session in
-            let matchesFilter: Bool = switch filter {
-            case .all: true
-            case .model(let model): session.model == model
-            }
-            let haystack = [
-                session.project,
-                session.projectDirectory ?? "",
-                session.note,
-                session.command,
-                session.model.displayName
-            ]
-                .joined(separator: " ")
-                .lowercased()
-            return matchesFilter && (needle.isEmpty || haystack.contains(needle))
+    @State private var model: AssistantModel?
+    @State private var selection: UUID?
+    @State private var editing: ResumeSession?
+    @State private var removing: ResumeSession?
+    @State private var errorMessage: String?
+    @State private var copied = false
+    @State private var launching = false
+    private var matches: [ResumeSession] {
+        store.sessions.filter { session in
+            (model == nil || session.model == model) && (search.isEmpty ||
+                [session.project, session.projectDirectory ?? "", session.command, session.note]
+                    .joined(separator: " ").localizedCaseInsensitiveContains(search))
         }
     }
-
-    private var groupedSessions: [(AssistantModel, [ResumeSession])] {
-        AssistantModel.allCases.compactMap { model in
-            let matches = filteredSessions.filter { $0.model == model }
-            return matches.isEmpty ? nil : (model, matches)
-        }
-    }
-
+    private var selected: ResumeSession? { matches.first { $0.id == selection } }
     var body: some View {
-        NavigationSplitView {
-            sidebar
-                .navigationSplitViewColumnWidth(min: 190, ideal: 210, max: 240)
-        } detail: {
-            VStack(spacing: 0) {
-                libraryHeader
-                Divider()
-                content
-            }
-            .background(Color.repriseSurface)
-        }
-        .background(Color.repriseCanvas)
-    }
-
-    private var sidebar: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 10) {
-                Image(nsImage: NSApp.applicationIconImage)
-                    .resizable()
-                    .frame(width: 34, height: 34)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Reprise")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text("Session notebook")
-                        .font(.system(size: 9))
-                        .foregroundStyle(.tertiary)
+            header
+            Divider()
+            HSplitView {
+                sessionList.frame(minWidth: 280, idealWidth: 340, maxWidth: 420)
+                detail.frame(minWidth: 440, maxWidth: .infinity, maxHeight: .infinity)
+            }
+            Divider()
+            syncBar
+        }
+        .background(Color.repriseSurface)
+        .sheet(item: $editing) { session in SessionEditor(session: session) { store.update($0) } }
+        .alert("Remove session from Reprise?", isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } })) {
+            Button("Cancel", role: .cancel) { removing = nil }
+            Button("Remove", role: .destructive) { if let session = removing { store.delete(session) }; removing = nil }
+        } message: { Text("The original conversation stays on disk. Automatic discovery will not add this session again.") }
+        .alert("Could not resume session", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
+            Button("OK") { errorMessage = nil }
+        } message: { Text(errorMessage ?? "") }
+        .onChange(of: matches.map(\.id), initial: true) { _, ids in
+            if selection == nil || !ids.contains(selection!) { selection = ids.first }
+        }
+    }
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Your work, ready to resume").font(.system(size: 26, weight: .semibold))
+                    Text("\(store.sessions.count) sessions · Private on this Mac").font(.system(size: 13)).foregroundStyle(.secondary)
                 }
                 Spacer()
+                Button(action: newCapture) { Label("Add screenshot", systemImage: "photo.badge.plus") }.controlSize(.large).keyboardShortcut("n")
             }
-            .padding(.horizontal, 14)
-            .padding(.top, 28)
-            .padding(.bottom, 16)
-
-            List(selection: $filter) {
-                Section("WORKSPACE") {
-                    Label {
+            HStack(spacing: 12) {
+                TextField("Search projects, folders, notes or commands", text: $search).textFieldStyle(.roundedBorder).accessibilityLabel("Search sessions")
+                Picker("Assistant", selection: $model) {
+                    Text("All assistants").tag(nil as AssistantModel?)
+                    ForEach(AssistantModel.allCases) { Text($0.displayName).tag(Optional($0)) }
+                }.frame(width: 190)
+            }
+        }.padding(24)
+    }
+    private var sessionList: some View {
+        Group {
+            if matches.isEmpty {
+                ContentUnavailableView("No sessions found", systemImage: "magnifyingglass", description: Text("Try another search, sync local sessions, or add a screenshot."))
+            } else {
+                ScrollView {
+                  LazyVStack(alignment: .leading, spacing: 12) {
+                    ForEach(AssistantModel.allCases) { assistant in
+                        let group = matches.filter { $0.model == assistant }
+                        if !group.isEmpty {
+                            Text("\(assistant.displayName) · \(group.count)")
+                                .font(.system(size: 12, weight: .semibold)).foregroundStyle(.secondary).padding(.top, 8)
+                                ForEach(group) { session in
+                                  Button { selection = session.id; copied = false } label: {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text(session.project).font(.system(size: 14, weight: .semibold)).lineLimit(1)
+                                        Text(session.projectDirectory ?? "Choose a project folder").font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                                        HStack {
+                                            Text(session.discoveryKey != nil ? "Auto-saved" : "Screenshot / manual")
+                                            Spacer()
+                                            Text(session.createdAt, style: .date)
+                                        }.font(.system(size: 11)).foregroundStyle(.secondary)
+                                    }.foregroundStyle(.primary).padding(12).frame(maxWidth: .infinity, alignment: .leading)
+                                      .background(selection == session.id ? Color.repriseGreen.opacity(0.16) : Color.clear, in: RoundedRectangle(cornerRadius: 10))
+                                  }.buttonStyle(.plain)
+                                    .contextMenu {
+                                        Button("Edit details") { editing = session }
+                                        Button("Remove from library", role: .destructive) { removing = session }
+                                    }
+                                }
+                        }
+                    }
+                  }.padding(12)
+                }.background(Color.repriseCanvas)
+            }
+        }
+    }
+    @ViewBuilder private var detail: some View {
+        if let session = selected {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    HStack {
+                        Label(session.model.displayName, systemImage: session.model.symbol).font(.system(size: 13, weight: .semibold)).foregroundStyle(session.model.tint)
+                        Spacer()
+                        Button("Edit details") { editing = session }
+                    }
+                    Text(session.project).font(.system(size: 28, weight: .semibold)).textSelection(.enabled)
+                    VStack(alignment: .leading, spacing: 8) {
+                        sectionLabel("PROJECT DIRECTORY")
+                        Text(session.projectDirectory ?? "No folder selected").font(.system(size: 13, design: .monospaced)).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
                         HStack {
-                            Text("All Sessions")
-                            Spacer()
-                            Text("\(store.sessions.count)")
-                                .foregroundStyle(.tertiary)
-                        }
-                    } icon: {
-                        Image(systemName: "books.vertical")
-                    }
-                    .tag(LibraryFilter.all)
-                }
-
-                Section("ASSISTANTS") {
-                    ForEach(AssistantModel.allCases) { model in
-                        Label {
-                            HStack {
-                                Text(model.displayName)
-                                Spacer()
-                                Text("\(store.count(for: model))")
-                                    .foregroundStyle(.tertiary)
+                            Button("Choose folder…") { chooseDirectory(for: session) }
+                            if let path = session.projectDirectory {
+                                Button("Show in Finder") { NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: (path as NSString).expandingTildeInPath) }
                             }
-                        } icon: {
-                            Image(systemName: model.symbol)
-                                .foregroundStyle(model.tint)
                         }
-                        .tag(LibraryFilter.model(model))
                     }
-                }
-            }
-            .listStyle(.sidebar)
-
-            HStack(spacing: 7) {
-                Circle().fill(Color.repriseGreen).frame(width: 6, height: 6)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Stored locally")
-                        .font(.system(size: 9, weight: .semibold))
-                    Text("Nothing is uploaded.")
-                        .font(.system(size: 8))
-                        .foregroundStyle(.tertiary)
-                }
-                Spacer()
-            }
-            .padding(14)
-        }
-    }
-
-    private var libraryHeader: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Resume library")
-                    .font(.system(size: 25, weight: .semibold))
-                    .tracking(-0.6)
-                Text("\(store.sessions.count) saved \(store.sessions.count == 1 ? "session" : "sessions")")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            TextField("Search projects or commands", text: $search)
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 230)
-            Button(action: newCapture) {
-                Label("Capture Session", systemImage: "photo.badge.plus")
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(.repriseGreen)
-            .keyboardShortcut("n", modifiers: .command)
-        }
-        .padding(.horizontal, 28)
-        .padding(.top, 30)
-        .padding(.bottom, 20)
-    }
-
-    @ViewBuilder
-    private var content: some View {
-        if filteredSessions.isEmpty {
-            ContentUnavailableView {
-                Label(
-                    store.sessions.isEmpty ? "No saved sessions" : "No matching sessions",
-                    systemImage: store.sessions.isEmpty ? "terminal" : "magnifyingglass"
-                )
-            } description: {
-                Text(store.sessions.isEmpty
-                     ? "Drop a terminal screenshot on the Reprise menubar icon to begin."
-                     : "Try a different search or assistant filter.")
-            } actions: {
-                if store.sessions.isEmpty {
-                    Button("Capture a Session", action: newCapture)
-                } else {
-                    Button("Clear Search") { search = "" }
-                }
+                    VStack(alignment: .leading, spacing: 8) {
+                        sectionLabel("RESUME COMMAND")
+                        Text(session.command).font(.system(size: 14, design: .monospaced)).foregroundStyle(Color.repriseBone).textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading).padding(16)
+                            .background(Color.repriseTerminal, in: RoundedRectangle(cornerRadius: 10))
+                        HStack {
+                            Button {
+                                launching = true
+                                Task {
+                                    defer { launching = false }
+                                    do { try await TerminalLauncher.launch(session) }
+                                    catch { errorMessage = error.localizedDescription }
+                                }
+                            } label: { Label(launching ? "Opening Terminal…" : "Resume in Terminal", systemImage: "terminal") }
+                                .buttonStyle(.borderedProminent).tint(.repriseGreen).controlSize(.large).disabled(launching).keyboardShortcut(.return, modifiers: .command)
+                            Button(copied ? "Copied!" : "Copy command") {
+                                NSPasteboard.general.clearContents(); NSPasteboard.general.setString(session.command, forType: .string)
+                                copied = true
+                                Task { try? await Task.sleep(for: .seconds(1.5)); copied = false }
+                            }.controlSize(.large)
+                        }
+                        Text("Opens a new Terminal session in the project folder. Your CLI handles sign-in and session loading.").font(.system(size: 12)).foregroundStyle(.secondary)
+                    }
+                    VStack(alignment: .leading, spacing: 8) {
+                        sectionLabel("PROJECT NOTES")
+                        Text(session.note.isEmpty ? "Add a note to remember where you left off." : session.note)
+                            .font(.system(size: 14)).foregroundStyle(session.note.isEmpty ? .secondary : .primary).textSelection(.enabled)
+                    }
+                    Divider()
+                    HStack {
+                        Text("Last activity \(session.createdAt.formatted(date: .abbreviated, time: .shortened))").font(.system(size: 12)).foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Remove", role: .destructive) { removing = session }
+                    }
+                }.padding(28)
             }
         } else {
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 26) {
-                    ForEach(groupedSessions, id: \.0) { model, sessions in
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack(spacing: 8) {
-                                Image(systemName: model.symbol)
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundStyle(model.tint)
-                                    .frame(width: 26, height: 26)
-                                    .background(.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 7))
-                                Text(model.displayName)
-                                    .font(.system(size: 13, weight: .semibold))
-                                Text("\(sessions.count)")
-                                    .font(.system(size: 9, weight: .bold))
-                                    .foregroundStyle(.tertiary)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 3)
-                                    .background(.primary.opacity(0.05), in: Capsule())
-                            }
-
-                            VStack(spacing: 0) {
-                                ForEach(sessions) { session in
-                                    SessionLibraryRow(
-                                        session: session,
-                                        copied: copiedID == session.id,
-                                        copy: { copy(session) },
-                                        delete: { store.delete(session) }
-                                    )
-                                    if session.id != sessions.last?.id { Divider() }
-                                }
-                            }
-                            .background(Color.repriseCanvas.opacity(0.48), in: RoundedRectangle(cornerRadius: 10))
-                        }
-                    }
-                }
-                .padding(.horizontal, 28)
-                .padding(.vertical, 24)
-            }
+            ContentUnavailableView("Ready when you are", systemImage: "terminal", description: Text("Select a saved session to see its project and resume your work."))
         }
     }
-
-    private func copy(_ session: ResumeSession) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(session.command, forType: .string)
-        copiedID = session.id
-        Task {
-            try? await Task.sleep(for: .seconds(1.4))
-            if copiedID == session.id { copiedID = nil }
+    private var syncBar: some View {
+        HStack(spacing: 12) {
+            Toggle("Auto-save local sessions", isOn: $store.autoDiscovery).toggleStyle(.switch).controlSize(.small)
+            if store.isSyncing { ProgressView().controlSize(.small) }
+            Text(store.storageError ?? store.syncMessage).font(.system(size: 12)).foregroundStyle(store.storageError == nil ? .secondary : Color.red).lineLimit(2)
+            Spacer()
+            Button("Sync now") { Task { await store.sync() } }.disabled(store.isSyncing)
+            Menu {
+                Button("Restore removed local sessions") { Task { await store.restoreHiddenSessions() } }
+            } label: { Image(systemName: "ellipsis.circle") }.menuStyle(.borderlessButton).frame(width: 24)
+        }.padding(.horizontal, 20).padding(.vertical, 12)
+    }
+    private func sectionLabel(_ title: String) -> some View {
+        Text(title).font(.system(size: 11, weight: .semibold)).tracking(0.8).foregroundStyle(.secondary)
+    }
+    private func chooseDirectory(for session: ResumeSession) {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.allowsMultipleSelection = false
+        panel.prompt = "Use Project Folder"
+        if panel.runModal() == .OK, let url = panel.url {
+            var updated = session; updated.projectDirectory = url.path; store.update(updated)
         }
     }
 }
 
-private struct SessionLibraryRow: View {
-    let session: ResumeSession
-    let copied: Bool
-    let copy: () -> Void
-    let delete: () -> Void
-
+private struct SessionEditor: View {
+    @Environment(\.dismiss) private var dismiss
+    @State var session: ResumeSession
+    let save: (ResumeSession) -> Void
     var body: some View {
-        HStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(session.project)
-                    .font(.system(size: 12, weight: .semibold))
-                    .lineLimit(1)
-                if let directory = session.projectDirectory, !directory.isEmpty {
-                    Label(directory, systemImage: "folder")
-                        .font(.system(size: 8, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                Text(session.note.isEmpty ? "No project note" : session.note)
-                    .font(.system(size: 8))
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
+        VStack(alignment: .leading, spacing: 20) {
+            Text("Edit session").font(.title2.weight(.semibold))
+            Form {
+                TextField("Project", text: $session.project)
+                TextField("Directory", text: Binding(get: { session.projectDirectory ?? "" }, set: { session.projectDirectory = $0 }))
+                TextField("Command", text: $session.command)
+                TextField("Notes", text: $session.note, axis: .vertical).lineLimit(3...6)
             }
-            .frame(minWidth: 180, maxWidth: 240, alignment: .leading)
-
-            HStack(spacing: 8) {
-                Text("$")
-                    .foregroundStyle(Color.repriseGreen)
-                Text(session.command)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                Spacer(minLength: 4)
-                Button(action: copy) {
-                    Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                        .contentTransition(.symbolEffect(.replace))
-                }
-                .buttonStyle(.plain)
-                .help("Copy resume command")
+            HStack {
+                Spacer()
+                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button("Save changes") { save(session); dismiss() }.buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
+                    .disabled(session.project.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || session.command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-            .font(.system(size: 9, design: .monospaced))
-            .foregroundStyle(Color.repriseBone)
-            .padding(.horizontal, 11)
-            .frame(maxWidth: .infinity, minHeight: 36)
-            .background(Color.repriseTerminal, in: RoundedRectangle(cornerRadius: 7))
-
-            VStack(alignment: .trailing, spacing: 3) {
-                Text(session.createdAt, style: .relative)
-                    .font(.system(size: 9))
-                    .foregroundStyle(.tertiary)
-                Text(session.detectedAutomatically ? "AUTO" : "MANUAL")
-                    .font(.system(size: 7, weight: .bold))
-                    .foregroundStyle(session.detectedAutomatically ? Color.repriseGreen : Color.secondary)
-            }
-            .frame(width: 62, alignment: .trailing)
-
-            Button(role: .destructive, action: delete) {
-                Image(systemName: "trash")
-            }
-            .buttonStyle(.borderless)
-            .help("Delete session")
-        }
-        .padding(.horizontal, 14)
-        .frame(minHeight: 74)
-        .contextMenu {
-            Button("Copy Command", action: copy)
-            Button("Delete Session", role: .destructive, action: delete)
-        }
+        }.padding(24).frame(width: 560)
     }
 }
