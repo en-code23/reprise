@@ -1,5 +1,11 @@
 # Release notes
 
+## 1.1.1
+
+- Refine the app icon with a smooth graphite tile, bold ivory terminal-return mark, and sage cursor. Transparent outer corners replace the old dark square backdrop.
+- Add a matching monochrome menubar mark that adapts to macOS appearance.
+- Update the website's app mark and ensure the icon package includes an exact 1024px master.
+
 ## 1.1.0
 
 - Automatically discover local Codex and Claude sessions at startup and every 30 seconds while the app runs. Toggle discovery or refresh manually.

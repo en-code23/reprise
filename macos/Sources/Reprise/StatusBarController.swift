@@ -35,9 +35,7 @@ final class StatusBarController: NSObject {
         )
 
         if let button = statusItem.button {
-            let image = NSImage(systemSymbolName: "arrow.uturn.backward", accessibilityDescription: "Reprise")
-            image?.isTemplate = true
-            button.image = image
+            button.image = StatusBarIcon.make()
             button.toolTip = "Reprise — drop a terminal screenshot"
 
             let overlay = StatusDropView(frame: button.bounds)

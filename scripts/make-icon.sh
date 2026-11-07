@@ -17,7 +17,7 @@ sips -z 256 256 "$SOURCE_ICON" --out "$ICONSET/icon_128x128@2x.png" >/dev/null
 sips -z 256 256 "$SOURCE_ICON" --out "$ICONSET/icon_256x256.png" >/dev/null
 sips -z 512 512 "$SOURCE_ICON" --out "$ICONSET/icon_256x256@2x.png" >/dev/null
 sips -z 512 512 "$SOURCE_ICON" --out "$ICONSET/icon_512x512.png" >/dev/null
-cp "$SOURCE_ICON" "$ICONSET/icon_512x512@2x.png"
+sips -z 1024 1024 "$SOURCE_ICON" --out "$ICONSET/icon_512x512@2x.png" >/dev/null
 
 iconutil -c icns "$ICONSET" -o "$BUILD_DIR/AppIcon.icns"
 echo "$BUILD_DIR/AppIcon.icns"
