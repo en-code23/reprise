@@ -95,7 +95,7 @@ struct CapturePopoverView: View {
             if !store.sessions.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("RECENT")
+                        Text("RECENT PROJECTS")
                             .font(.system(size: 11, weight: .bold))
                             .tracking(0.8)
                             .foregroundStyle(.tertiary)
@@ -105,8 +105,8 @@ struct CapturePopoverView: View {
                             .font(.system(size: 11, weight: .semibold))
                     }
 
-                    ForEach(store.sessions.prefix(3)) { session in
-                        CompactSessionRow(session: session)
+                    ForEach(Array(ProjectLibrary.groups(store.sessions).filter { $0.area == .projects }.prefix(3))) { project in
+                        CompactSessionRow(session: project.latest)
                     }
                 }
             }

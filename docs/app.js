@@ -3,9 +3,12 @@ const releaseURL = `https://github.com/${repository}/releases/latest`;
 
 async function wireLatestRelease() {
   try {
-    const response = await fetch(`https://api.github.com/repos/${repository}/releases/latest`, {
-      headers: { Accept: "application/vnd.github+json" },
-    });
+    const response = await fetch(
+      `https://api.github.com/repos/${repository}/releases/latest`,
+      {
+        headers: { Accept: "application/vnd.github+json" },
+      },
+    );
     if (!response.ok) throw new Error("No release yet");
     const release = await response.json();
     const dmg = release.assets?.find((asset) => asset.name.endsWith(".dmg"));
@@ -25,15 +28,18 @@ async function wireLatestRelease() {
   }
 }
 
-document.querySelector("[data-copy-demo]")?.addEventListener("click", async (event) => {
-  const button = event.currentTarget;
-  try {
-    await navigator.clipboard.writeText("codex resume 019cba47-918e");
-    button.textContent = "✓";
-    window.setTimeout(() => { button.textContent = "⧉"; }, 1400);
-  } catch {
-    button.textContent = "✓";
-  }
+document.querySelectorAll("[data-theme]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const dark = button.dataset.theme === "dark";
+    const path = dark ? "assets/library-dark.png" : "assets/library-light.png";
+    document.getElementById("app-preview").src = path;
+    document.getElementById("full-preview").href = path;
+    document
+      .querySelectorAll("[data-theme]")
+      .forEach((item) =>
+        item.setAttribute("aria-pressed", String(item === button)),
+      );
+  });
 });
 
 wireLatestRelease();

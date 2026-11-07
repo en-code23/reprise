@@ -50,6 +50,16 @@ final class SessionStore: ObservableObject {
         save()
     }
 
+    func assignDirectory(_ path: String, to ids: Set<UUID>) {
+        for index in sessions.indices where ids.contains(sessions[index].id) {
+            sessions[index].projectDirectory = path
+            if sessions[index].project.range(of: #"(?i)^(screenshot|bildschirmfoto|screen shot)"#, options: .regularExpression) != nil {
+                sessions[index].project = URL(fileURLWithPath: path).lastPathComponent
+            }
+        }
+        save()
+    }
+
     func startDiscovery() {
         guard discoveryTask == nil else { return }
         discoveryTask = Task { [weak self] in

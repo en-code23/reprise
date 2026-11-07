@@ -1,5 +1,13 @@
 # Release notes
 
+## 1.2.0
+
+- Organise the library by project directory instead of repeating the project name for every session. Codex and Claude sessions share one project row; different directories remain distinct even when their names match.
+- Resume the latest session by default, choose from four recent sessions, or expand the complete project history. Search includes older notes without splitting the project into repeated rows.
+- Move captures without a project folder into Unassigned, with an explanation and a folder-assignment action. Preserve all saved entries. Internal `.codex`, `.claude`, and `.chatgpt` workspace paths have their own Internal view.
+- Add permanent library navigation, compact project summaries, and separate session detail controls. Menubar recents also show each project once.
+- Rebuild the download website around screenshots of the real native app, with light/dark preview controls, direct release downloads, and installation/grouping FAQs.
+
 ## 1.1.1
 
 - Refine the app icon with a smooth graphite tile, bold ivory terminal-return mark, and sage cursor. Transparent outer corners replace the old dark square backdrop.

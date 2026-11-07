@@ -65,17 +65,44 @@ final class WorkflowTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: file), invalid)
     }
 
-    @MainActor func testRenderLibraryPreviews() throws {
-        guard let output = ProcessInfo.processInfo.environment["REPRISE_RENDER_DIR"] else { return }
+    @MainActor func testAssigningCaptureMovesItIntoExistingProjectWithoutDeletingIt() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = SessionStore(directory: directory)
-        store.add(ResumeSession(model: .codex, project: "Billing portal", projectDirectory: "/Users/developer/Projects/billing-portal", note: "Continue the payment retry timeline and webhook tests.", command: "codex resume \(identifier)", detectedAutomatically: true))
+        let capture = ResumeSession(model: .codex, project: "Bildschirmfoto 2026-08-30", note: "Keep my note", command: "codex resume \(UUID().uuidString)", sourceFileName: "original.png", detectedAutomatically: false)
+        store.add(capture)
+        store.add(ResumeSession(model: .claude, project: "Example", projectDirectory: "/tmp/example", note: "", command: "claude --resume \(UUID().uuidString)", detectedAutomatically: true))
+        store.assignDirectory("/tmp/example", to: [capture.id])
+        XCTAssertEqual(ProjectLibrary.groups(store.sessions).count, 1)
+        XCTAssertEqual(store.sessions.count, 2)
+        XCTAssertEqual(store.sessions.first { $0.id == capture.id }?.note, "Keep my note")
+        XCTAssertEqual(store.sessions.first { $0.id == capture.id }?.sourceFileName, "original.png")
+    }
+
+    @MainActor func testRenderLibraryPreviews() throws {
+        guard let output = ProcessInfo.processInfo.environment["REPRISE_RENDER_DIR"] else { return }
+        let iconURL = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("Resources/AppIcon.png")
+        if let icon = NSImage(contentsOf: iconURL) { NSApplication.shared.applicationIconImage = icon }
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = SessionStore(directory: directory)
+        for index in 0..<18 {
+            let model: AssistantModel = index % 3 == 0 ? .codex : .claude
+            var session = ResumeSession(model: model, project: "Billing portal", projectDirectory: "/Users/you/Projects/billing-portal", note: index == 0 ? "Continue the payment retry timeline. Webhook tests are passing; next up is the failure state." : "", command: CommandParser.resumeCommand(model: model, identifier: index == 0 ? identifier : UUID().uuidString), createdAt: Date().addingTimeInterval(Double(-index * 3600)), detectedAutomatically: true)
+            session.discoveryKey = session.identityKey
+            store.add(session)
+        }
+        for (name, folder) in [("Studio website", "studio"), ("Search service", "search"), ("Mobile onboarding", "mobile"), ("Release monitor", "monitor")] {
+            store.add(ResumeSession(model: .claude, project: name, projectDirectory: "/Users/you/Projects/\(folder)", note: "", command: "claude --resume \(UUID().uuidString)", createdAt: Date().addingTimeInterval(-86400), detectedAutomatically: true))
+        }
+        store.add(ResumeSession(model: .codex, project: "Screenshot 2026-08-30", note: "", command: "codex resume \(UUID().uuidString)", detectedAutomatically: false))
+        store.add(ResumeSession(model: .codex, project: "internal-workspace", projectDirectory: "/Users/you/.codex/chat/internal-workspace", note: "", command: "codex resume \(UUID().uuidString)", detectedAutomatically: true))
         for (name, size, appearance) in [
-            ("library-light", NSSize(width: 1120, height: 740), NSAppearance.Name.aqua),
-            ("library-dark-compact", NSSize(width: 920, height: 600), NSAppearance.Name.darkAqua)
+            ("library-light", NSSize(width: 1180, height: 800), NSAppearance.Name.aqua),
+            ("library-dark", NSSize(width: 1180, height: 800), NSAppearance.Name.darkAqua),
+            ("library-dark-compact", NSSize(width: 1000, height: 720), NSAppearance.Name.darkAqua)
         ] {
-            let view = NSHostingView(rootView: LibraryView(store: store, newCapture: {}))
+            let view = NSHostingView(rootView: LibraryView(store: store, newCapture: {}).environment(\.locale, Locale(identifier: "en_US")))
             view.frame = NSRect(origin: .zero, size: size)
             view.appearance = NSAppearance(named: appearance)
             let window = NSWindow(contentRect: view.frame, styleMask: [.borderless], backing: .buffered, defer: false)

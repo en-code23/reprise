@@ -16,6 +16,10 @@ The app lets you review the detected assistant and command, add or detect the pr
 
 The library opens when Reprise starts. Select a session to see the full command, folder, and notes. **Resume in Terminal** opens a new Apple Terminal session, changes to the project directory, and starts the appropriate CLI. Choose a new folder if the project has moved. The installed CLI must be available in your shell and signed in.
 
+The library shows one row per project directory, with sessions from different assistants together. Selecting a project chooses its latest session; use its history to resume an earlier conversation. Project names alone are never used for grouping, so two folders with the same name stay separate.
+
+Older screenshot/manual entries without a folder are preserved under **Unassigned**. Assign a directory to move them into Projects. Sessions inside `.codex`, `.claude`, or `.chatgpt` directories are available under **Internal**, apart from regular projects. No conversations or captures are deleted by this organisation change.
+
 macOS may ask to allow Reprise to control Terminal on first use. Permission can be managed in System Settings → Privacy & Security → Automation. Reprise validates commands and quotes directory paths before launching; arbitrary shell scripts are not supported. Custom commands remain copyable.
 
 ## Automatic local discovery

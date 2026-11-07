@@ -2,170 +2,241 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f4f1e9" />
-    <meta name="description" content="Reprise turns terminal screenshots into a private, organized library of Codex, Claude, and Grok resume commands." />
-    <meta property="og:title" content="Reprise — Pick up exactly where you left off" />
-    <meta property="og:description" content="A private macOS menubar app for saving AI coding-session resume commands from screenshots." />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#f7f8f5" />
+    <title>Reprise — Every project. One place to resume.</title>
+    <meta
+      name="description"
+      content="A native Mac app that organises Codex and Claude sessions by project. Find your folder, choose a session, and resume in Terminal."
+    />
+    <meta
+      property="og:title"
+      content="Reprise — Every project. One place to resume."
+    />
+    <meta
+      property="og:description"
+      content="Your AI coding sessions, organised by project. Private on your Mac."
+    />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://en-code23.github.io/reprise/assets/og.png" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Reprise — Pick up exactly where you left off" />
-    <meta name="twitter:description" content="Save Codex, Claude, and Grok resume commands from a terminal screenshot." />
-    <meta name="twitter:image" content="https://en-code23.github.io/reprise/assets/og.png" />
-    <title>Reprise — Resume your AI coding sessions</title>
+    <meta
+      property="og:image"
+      content="https://en-code23.github.io/reprise/assets/library-light.png"
+    />
+    <meta
+      name="twitter:image"
+      content="https://en-code23.github.io/reprise/assets/library-light.png"
+    />
     <link rel="icon" href="assets/reprise-icon.png" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <nav class="site-nav" aria-label="Main navigation">
-      <a class="wordmark" href="#top" aria-label="Reprise home">
-        <img src="assets/reprise-icon.png" alt="" />
-        <span>Reprise</span>
-      </a>
-      <div class="nav-links">
-        <a href="#workflow">How it works</a>
-        <a href="#privacy">Privacy</a>
-        <a href="https://github.com/en-code23/reprise" rel="noreferrer">GitHub</a>
-      </div>
-      <a class="nav-download" data-download href="https://github.com/en-code23/reprise/releases/latest">
-        Download <span aria-hidden="true">↓</span>
-      </a>
-    </nav>
+    <header class="navigation wrap">
+      <a class="brand" href="#"
+        ><img
+          src="assets/reprise-icon.png"
+          alt=""
+          width="36"
+          height="36"
+        />Reprise</a
+      >
+      <nav aria-label="Main navigation">
+        <a href="#inside">Inside the app</a><a href="#questions">Questions</a
+        ><a href="https://github.com/en-code23/reprise">Source code ↗</a>
+      </nav>
+      <a
+        class="button small"
+        data-download
+        href="https://github.com/en-code23/reprise/releases/latest"
+        >Download for Mac <span aria-hidden="true">↓</span></a
+      >
+    </header>
 
-    <main id="top">
-      <section class="hero">
-        <div class="hero-copy">
-          <div class="eyebrow"><span></span> Native macOS utility</div>
-          <h1>Pick up exactly<br />where you left off.</h1>
+    <main>
+      <section class="hero wrap">
+        <p class="eyebrow"><span></span>A small Mac app for unfinished work</p>
+        <h1>Every project.<br /><span>One place to resume.</span></h1>
+        <p class="intro">
+          Codex in one terminal. Claude in another. Reprise keeps their sessions
+          together by project, ready for your next good idea.
+        </p>
+        <div class="hero-actions">
+          <a
+            class="button"
+            data-download
+            href="https://github.com/en-code23/reprise/releases/latest"
+            >Download Reprise <span aria-hidden="true">↓</span></a
+          ><span
+            >Free &amp; open source<br /><small
+              >macOS 14+ · Apple silicon &amp; Intel</small
+            ></span
+          >
+        </div>
+        <div class="release-line">
+          <span data-version>Latest version</span
+          ><span aria-hidden="true">·</span
+          ><a href="https://github.com/en-code23/reprise/releases/latest"
+            >Release notes ↗</a
+          >
+        </div>
+      </section>
+
+      <section
+        class="product wrap"
+        id="inside"
+        aria-label="Reprise app preview"
+      >
+        <div class="preview-controls">
+          <p>One project. All of its sessions.</p>
+          <div class="appearance" role="group" aria-label="Preview appearance">
+            <button type="button" data-theme="light" aria-pressed="true">
+              Light</button
+            ><button type="button" data-theme="dark" aria-pressed="false">
+              Dark
+            </button>
+          </div>
+        </div>
+        <div class="app-window">
+          <div class="window-bar">
+            <div aria-hidden="true"><i></i><i></i><i></i></div>
+            <span>Reprise — Project library</span
+            ><a
+              id="full-preview"
+              href="assets/library-light.png"
+              target="_blank"
+              rel="noreferrer"
+              >Full-size ↗</a
+            >
+          </div>
+          <img
+            id="app-preview"
+            src="assets/library-light.png"
+            alt="Reprise project library: five project folders, with 18 Billing portal sessions grouped into one row and a Resume in Terminal action."
+            width="1180"
+            height="800"
+            fetchpriority="high"
+          />
+        </div>
+        <p class="preview-caption">
+          An actual app view with example projects. Your conversations stay on
+          your Mac.
+        </p>
+      </section>
+
+      <section class="features wrap" aria-label="How Reprise works">
+        <article>
+          <span class="number">01 / COLLECT</span>
+          <h2>It remembers<br />the sessions.</h2>
           <p>
-            Automatically save local Codex and Claude sessions, or drop a terminal screenshot on your menubar.
-            Find your project, then resume it directly in Terminal with the right directory and command.
+            Local Codex and Claude sessions appear automatically while Reprise
+            runs. Add a screenshot or paste a command for anything else.
           </p>
-          <div class="hero-actions">
-            <a class="download-button" data-download href="https://github.com/en-code23/reprise/releases/latest">
-              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M13.2 10.4c0-2 1.7-3 1.8-3.1-1-.8-2.4-.9-2.9-.9-1.2-.1-2.3.7-2.9.7-.6 0-1.5-.7-2.5-.7-1.3 0-2.6.8-3.3 2-1.4 2.4-.4 6 1 8 .7 1 1.5 2 2.6 2 .9 0 1.4-.6 2.6-.6 1.2 0 1.6.6 2.6.6 1.1 0 1.8-1 2.4-2 .8-1.1 1.1-2.2 1.1-2.3-.1 0-2.5-1-2.5-3.7ZM11.3 5.1c.5-.7.9-1.7.8-2.6-.8 0-1.8.5-2.4 1.2-.5.6-.9 1.6-.8 2.5.9.1 1.8-.4 2.4-1.1Z" /></svg>
-              <span><b>Download for Mac</b><small data-version>Latest release</small></span>
-            </a>
-            <a class="source-link" href="https://github.com/en-code23/reprise">View source <span aria-hidden="true">↗</span></a>
-          </div>
-          <div class="requirements"><span>macOS 14+</span><i></i><span>Apple silicon &amp; Intel</span><i></i><span>Free &amp; open source</span></div>
-        </div>
-
-        <div class="hero-product" aria-label="Reprise app preview">
-          <div class="menu-strip">
-            <div class="menu-left"><span class="apple-dot"></span><b>Finder</b><span>File</span><span>Edit</span><span>View</span></div>
-            <div class="menu-right"><span>⌁</span><span class="status-capture"><img src="assets/reprise-icon.png" alt="" /> Drop screenshot</span><span>Sun Aug 30&nbsp;&nbsp;14:26</span></div>
-          </div>
-
-          <div class="popover-card">
-            <div class="popover-head">
-              <img src="assets/reprise-icon.png" alt="" />
-              <div><b>Reprise</b><span>Resume your AI coding sessions</span></div>
-              <button aria-label="Close preview">×</button>
-            </div>
-            <div class="drop-preview">
-              <div class="screen-thumb">
-                <div class="screen-bar"><i></i><i></i><i></i></div>
-                <code><span>~/Developer/billing</span><br />$ codex resume<br /><em>019cba47-918e…</em></code>
-                <div class="scan"></div>
-              </div>
-              <div class="detect-copy"><span class="check">✓</span><div><b>Command and directory detected</b><small>Codex · ~/Developer/billing</small></div><mark>AUTO</mark></div>
-              <div class="command-pill"><span>$</span><code>codex resume 019cba47…</code><button data-copy-demo aria-label="Copy example command">⧉</button></div>
-            </div>
-            <div class="popover-foot"><span><i></i> Stored only on this Mac</span><button>Save to Library</button></div>
-          </div>
-
-          <div class="library-card" aria-hidden="true">
-            <div class="library-side">
-              <strong>Library</strong>
-              <span class="selected">▣ &nbsp;All sessions <b>6</b></span>
-              <small>ASSISTANTS</small>
-              <span>▰ &nbsp;Codex <b>3</b></span>
-              <span>✦ &nbsp;Claude <b>2</b></span>
-              <span>ϟ &nbsp;Grok <b>1</b></span>
-            </div>
-            <div class="library-main">
-              <div class="library-title"><div><b>Resume library</b><small>6 saved sessions</small></div><button>Capture session</button></div>
-              <div class="group-label"><span>C</span><b>Codex</b><small>3</small></div>
-              <div class="session-line"><div><b>Billing portal</b><small>~/Developer/billing</small></div><code>$ codex resume 019cba47…</code><span>11h ago</span></div>
-              <div class="session-line"><div><b>Search indexing</b><small>~/Work/search-index</small></div><code>$ codex resume 019cb5ec…</code><span>Yesterday</span></div>
-            </div>
-          </div>
-        </div>
+        </article>
+        <article>
+          <span class="number">02 / ORGANISE</span>
+          <h2>You see projects,<br />not repeated names.</h2>
+          <p>
+            One directory gets one place in your library, even across
+            assistants. Previous sessions live inside the project, newest first.
+          </p>
+        </article>
+        <article>
+          <span class="number">03 / RESUME</span>
+          <h2>Open Terminal.<br />Carry on.</h2>
+          <p>
+            Choose a session and resume in its project folder. Your full command
+            and a note about where you left off are right beside it.
+          </p>
+        </article>
       </section>
 
-      <section class="trust-row" aria-label="Supported assistants">
-        <span>Works with the tools you already use</span>
-        <div><b class="codex-mark">C</b> Codex</div>
-        <div><b class="claude-mark">A</b> Claude</div>
-        <div><b class="grok-mark">G</b> Grok</div>
-        <div><b class="other-mark">›</b> Any CLI</div>
-      </section>
-
-      <section class="workflow" id="workflow">
-        <div class="section-intro">
-          <span class="section-number">01</span>
-          <div><p>THE WORKFLOW</p><h2>Every session has<br />a way back in.</h2></div>
-          <p class="section-note">No more session IDs in sticky notes, forgotten tabs, or mystery commands with no project context.</p>
+      <section class="privacy wrap">
+        <div>
+          <p class="eyebrow">LOCAL IS THE WHOLE POINT</p>
+          <h2>No account.<br />Your Mac is enough.</h2>
         </div>
-
-        <div class="steps">
-          <article>
-            <span>1</span>
-            <div class="step-visual drop-visual"><div><b>⌁</b><small>terminal-session.png</small></div><i>↓</i><strong><img src="assets/reprise-icon.png" alt="" /></strong></div>
-            <h3>Save sessions automatically</h3>
-            <p>Reprise discovers local Codex and Claude sessions every 30 seconds while running. Screenshots and manual entry work too.</p>
-          </article>
-          <article>
-            <span>2</span>
-            <div class="step-visual read-visual"><code><b>~/Developer/onboarding</b><br />$ claude --resume<br />4d4e9441-f029…</code><div class="reader-line"></div><mark>VISION OCR</mark></div>
-            <h3>Reprise reads it locally</h3>
-            <p>Apple Vision detects the assistant, resume command, and working directory without an upload.</p>
-          </article>
-          <article>
-            <span>3</span>
-            <div class="step-visual save-visual"><div><small>PROJECT · DIRECTORY</small><b>iOS onboarding</b><small>~/Developer/onboarding</small></div><code>claude --resume 4d4…</code><button>Resume</button></div>
-            <h3>Return whenever you’re ready</h3>
-            <p>Search by project or directory, edit notes, and resume directly in Terminal. Copy the command whenever you need it.</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="privacy" id="privacy">
-        <div class="privacy-mark"><span>●</span><i></i></div>
-        <div class="privacy-copy">
-          <p>PRIVATE BY DEFAULT</p>
-          <h2>Your screenshots<br />stay on your Mac.</h2>
-        </div>
-        <div class="privacy-detail">
-          <p>Reprise uses Apple’s built-in Vision framework for OCR. There is no account, no cloud service, and no telemetry pipeline.</p>
+        <div>
+          <p>
+            Session discovery reads local metadata. Screenshot recognition uses
+            Apple Vision on your device. Reprise has no cloud account or
+            telemetry service.
+          </p>
           <ul>
-            <li><span>✓</span> On-device text recognition</li>
-            <li><span>✓</span> Sessions saved in Application Support</li>
-            <li><span>✓</span> Open-source code you can inspect</li>
+            <li>Conversation messages aren’t imported</li>
+            <li>Auto-save can be switched off</li>
+            <li>Your project notes stay on your Mac</li>
           </ul>
+          <a href="https://github.com/en-code23/reprise">Read the source ↗</a>
         </div>
       </section>
 
-      <section class="final-cta">
-        <img src="assets/reprise-icon.png" alt="Reprise app icon" />
-        <p>DON’T LOSE THE THREAD</p>
-        <h2>Your next session starts<br />where this one ended.</h2>
-        <a class="download-button light" data-download href="https://github.com/en-code23/reprise/releases/latest">
-          <span><b>Download Reprise</b><small data-version>Latest release for macOS</small></span>
-          <i aria-hidden="true">↓</i>
-        </a>
-        <small class="gatekeeper-note">On first launch, right-click Reprise and choose Open if macOS shows a security warning.</small>
+      <section class="questions wrap" id="questions">
+        <h2>A few useful details.</h2>
+        <div class="question-list">
+          <details>
+            <summary>Why might one project have several sessions?</summary>
+            <p>
+              A CLI creates separate conversations as you work. Reprise keeps
+              every session but groups matching project directories into one
+              row. Open the project to choose a recent or older session.
+            </p>
+          </details>
+          <details>
+            <summary>Where do screenshot captures go?</summary>
+            <p>
+              Assign a project directory when saving a capture. Older captures
+              without a directory live under Unassigned until you choose their
+              folder. The filename doesn’t become a project in your main
+              library.
+            </p>
+          </details>
+          <details>
+            <summary>What do I need to resume a project?</summary>
+            <p>
+              macOS 14 or later, the relevant CLI installed and signed in, and a
+              project folder that still exists. On first use, macOS may ask to
+              let Reprise control Terminal.
+            </p>
+          </details>
+          <details>
+            <summary>What happens when I remove a session?</summary>
+            <p>
+              It disappears from Reprise, but the original CLI conversation
+              stays on disk. Removed local sessions can be restored from the
+              library menu.
+            </p>
+          </details>
+          <details>
+            <summary>How do I install it?</summary>
+            <p>
+              Download the DMG, open it, and drag Reprise into Applications.
+              Quit any older copy before replacing it. This community release is
+              ad-hoc signed rather than Apple notarized; if macOS blocks it,
+              review the app under System Settings → Privacy &amp; Security.
+            </p>
+          </details>
+        </div>
+      </section>
+
+      <section class="closing wrap">
+        <img src="assets/reprise-icon.png" alt="" width="64" height="64" />
+        <h2>Leave a thread.<br />Find it again.</h2>
+        <a
+          class="button"
+          data-download
+          href="https://github.com/en-code23/reprise/releases/latest"
+          >Get Reprise for Mac <span aria-hidden="true">↓</span></a
+        >
       </section>
     </main>
-
-    <footer>
-      <a class="wordmark" href="#top"><img src="assets/reprise-icon.png" alt="" /><span>Reprise</span></a>
-      <p>Made for developers who have too many good threads going.</p>
-      <div><a href="https://github.com/en-code23/reprise">GitHub</a><a href="https://github.com/en-code23/reprise/blob/main/LICENSE">MIT License</a></div>
+    <footer class="wrap">
+      <a class="brand" href="#">Reprise</a
+      ><span>A home for the work you’ll come back to.</span
+      ><a href="https://github.com/en-code23/reprise">GitHub ↗</a
+      ><a href="https://github.com/en-code23/reprise/blob/main/LICENSE"
+        >MIT License</a
+      >
     </footer>
-
     <script src="app.js"></script>
   </body>
 </html>
