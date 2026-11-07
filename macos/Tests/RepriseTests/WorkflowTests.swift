@@ -90,6 +90,7 @@ final class WorkflowTests: XCTestCase {
             let model: AssistantModel = index % 3 == 0 ? .codex : .claude
             var session = ResumeSession(model: model, project: "Billing portal", projectDirectory: "/Users/you/Projects/billing-portal", note: index == 0 ? "Continue the payment retry timeline. Webhook tests are passing; next up is the failure state." : "", command: CommandParser.resumeCommand(model: model, identifier: index == 0 ? identifier : UUID().uuidString), createdAt: Date().addingTimeInterval(Double(-index * 3600)), detectedAutomatically: true)
             session.discoveryKey = session.identityKey
+            session.detectedOrigin = index % 2 == 0 ? .cli : .desktopApp
             store.add(session)
         }
         for (name, folder) in [("Studio website", "studio"), ("Search service", "search"), ("Mobile onboarding", "mobile"), ("Release monitor", "monitor")] {
@@ -138,6 +139,7 @@ final class WorkflowTests: XCTestCase {
         guard ProcessInfo.processInfo.environment["REPRISE_LIVE_DISCOVERY"] == "1" else { return }
         let result = SessionDiscovery.scan()
         print("Discovered metadata: Codex=\(result.sessions.filter { $0.model == .codex }.count), Claude=\(result.sessions.filter { $0.model == .claude }.count), warnings=\(result.warnings.count)")
+        for origin in SessionOrigin.allCases { print("Recorded source \(origin.title): \(result.sessions.filter { $0.origin == origin }.count)") }
         XCTAssertTrue(result.sessions.allSatisfy { $0.projectDirectory != nil && $0.discoveryKey != nil })
     }
 }

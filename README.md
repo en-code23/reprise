@@ -18,6 +18,16 @@ The library opens when Reprise starts. Select a session to see the full command,
 
 The library shows one row per project directory, with sessions from different assistants together. Selecting a project chooses its latest session; use its history to resume an earlier conversation. Project names alone are never used for grouping, so two folders with the same name stay separate.
 
+### Desktop app versus CLI
+
+Each session shows its recorded source: **Desktop app**, **CLI**, **IDE extension**, **SDK / automation**, **Multiple clients**, or **Unknown**. Combine an assistant filter with the **All sources** menu to show, for example, Codex desktop sessions or Claude CLI sessions without splitting the project library into duplicate rows.
+
+Codex detection uses specific `originator` markers, preferring them over the broad `source` value (Desktop can also report `vscode`). Claude detection uses top-level `entrypoint` metadata such as `cli`, `claude-desktop`, `sdk-cli`, and `sdk-py`. Multiple recognised entrypoints in the scanned portion are labelled Multiple clients. Discovery still reads only the first 256 KB of a file; it cannot reliably identify every client used throughout the whole conversation.
+
+Records without enough evidence stay Unknown. Use **Session details → Session source** to correct a label or select Automatic to return to metadata detection. The same selector is available during screenshot/manual capture review. On the next sync, old records gain metadata labels without losing your edits or overrides.
+
+These are recorded origins for **local coding sessions**, not a live connection indicator. Regular cloud-only Claude chats are not discovered. The source label does not change how Resume works: it still uses your chosen terminal and the saved resume command.
+
 Older screenshot/manual entries without a folder are preserved under **Unassigned**. Assign a directory to move them into Projects. Sessions inside `.codex`, `.claude`, or `.chatgpt` directories are available under **Internal**, apart from regular projects. No conversations or captures are deleted by this organisation change.
 
 macOS may ask to allow Reprise to control your selected terminal on first use. Permission can be managed in System Settings → Privacy & Security → Automation. Ghostty requires version 1.3 or newer with AppleScript enabled (`macos-applescript = true`, the default). Reprise uses Ghostty's native window configuration with a project directory and initial command input, preserving your configured shell. See [Ghostty's scripting documentation](https://ghostty.org/docs/features/applescript). Reprise validates commands and quotes directory paths before launching; arbitrary shell scripts are not supported. Custom commands remain copyable.
@@ -26,7 +36,7 @@ macOS may ask to allow Reprise to control your selected terminal on first use. P
 
 While Reprise is running, it scans `~/.codex/sessions` and `~/.claude/projects` at startup and every 30 seconds. `CODEX_HOME` and `CLAUDE_CONFIG_DIR` are respected when present in the app's environment. Use **Sync now** for an immediate refresh, or turn off **Auto-save local sessions** at the bottom of the library.
 
-Only session ID, assistant, project directory, and file modification time are retained. Conversation messages and tool output are not imported. Reading is limited to the first 256 KB of each transcript. Unsupported or incomplete files are skipped and may be found on a later scan. Subagent folders are excluded.
+Only session ID, assistant, project directory, file modification time, and source metadata are retained. Conversation messages and tool output are not imported. Reading is limited to the first 256 KB of each transcript. Unsupported or incomplete files are skipped and may be found on a later scan. Subagent folders are excluded.
 
 Repeated scans do not duplicate sessions or replace your edited project name, directory, or notes. Removing a session from Reprise leaves the original CLI conversation intact and suppresses automatic re-import. Local storage lives in `~/Library/Application Support/Reprise/sessions.json`.
 

@@ -51,20 +51,27 @@ enum SessionDiscovery {
     static func parse(data: Data, model: AssistantModel, modified: Date) -> ResumeSession? {
         var identifier: String?
         var directory: String?
+        var detection = OriginDetection(origin: .unknown, evidence: [])
+        var entrypoints = Set<String>()
         for line in data.split(separator: 0x0A) {
             guard let object = try? JSONSerialization.jsonObject(with: Data(line)) as? [String: Any] else { continue }
             if model == .codex, object["type"] as? String == "session_meta",
                let payload = object["payload"] as? [String: Any] {
                 identifier = payload["id"] as? String ?? payload["session_id"] as? String
                 directory = payload["cwd"] as? String
+                detection = SessionOriginDetector.codex(originator: payload["originator"] as? String, source: payload["source"] as? String)
                 break
             }
             if model == .claude, object["isSidechain"] as? Bool != true {
-                identifier = object["sessionId"] as? String ?? identifier
+                if let candidate = object["sessionId"] as? String {
+                    if let identifier, identifier != candidate { continue }
+                    identifier = candidate
+                }
                 directory = object["cwd"] as? String ?? directory
-                if identifier != nil && directory != nil { break }
+                if let entrypoint = object["entrypoint"] as? String { entrypoints.insert(entrypoint) }
             }
         }
+        if model == .claude { detection = SessionOriginDetector.claude(entrypoints: entrypoints) }
         guard let identifier, UUID(uuidString: identifier) != nil,
               let directory, directory.hasPrefix("/") else { return nil }
         let command = CommandParser.resumeCommand(model: model, identifier: identifier)
@@ -74,6 +81,8 @@ enum SessionDiscovery {
             createdAt: modified, detectedAutomatically: true
         )
         session.discoveryKey = "\(model.rawValue):\(command)"
+        session.detectedOrigin = detection.origin
+        session.sourceEvidence = detection.evidence
         return session
     }
 }

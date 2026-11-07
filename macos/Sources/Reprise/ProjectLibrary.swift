@@ -47,8 +47,8 @@ enum ProjectLibrary {
         return components.contains(where: { [".codex", ".claude", ".chatgpt"].contains($0) }) ? .internalSessions : .projects
     }
 
-    static func groups(_ sessions: [ResumeSession], model: AssistantModel? = nil, query: String = "") -> [ProjectGroup] {
-        let candidates = sessions.filter { model == nil || $0.model == model }
+    static func groups(_ sessions: [ResumeSession], model: AssistantModel? = nil, query: String = "", origin: SessionOrigin? = nil) -> [ProjectGroup] {
+        let candidates = sessions.filter { (model == nil || $0.model == model) && (origin == nil || $0.origin == origin) }
         let grouped = Dictionary(grouping: candidates) { session in
             normalizedDirectory(session.projectDirectory).map { "directory:" + $0 } ?? "unassigned:" + session.id.uuidString
         }
@@ -57,7 +57,7 @@ enum ProjectLibrary {
             let directory = normalizedDirectory(ordered[0].projectDirectory)
             return ProjectGroup(id: key, directory: directory, area: area(for: directory), sessions: ordered)
         }.filter { group in
-            query.isEmpty || ([group.title, group.directory ?? ""] + group.sessions.flatMap { [$0.note, $0.command, $0.project] })
+            query.isEmpty || ([group.title, group.directory ?? ""] + group.sessions.flatMap { [$0.note, $0.command, $0.project, $0.origin.title] })
                 .joined(separator: " ").localizedCaseInsensitiveContains(query)
         }.sorted { $0.latest.createdAt > $1.latest.createdAt }
     }

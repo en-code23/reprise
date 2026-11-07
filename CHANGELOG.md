@@ -1,5 +1,13 @@
 # Release notes
 
+## 1.3.0
+
+- Distinguish recorded session sources: Desktop app, CLI, IDE extension, SDK / automation, Multiple clients, and Unknown. Codex uses specific originator metadata; Claude uses transcript entrypoints.
+- Add source labels to session history and an All sources filter alongside project search. Source filtering keeps sessions grouped by project directory.
+- Enrich previously imported sessions on sync without creating duplicates or overwriting notes, project edits, or manual source corrections.
+- Add a manual source selector to capture review and Session details, with recorded metadata available for inspection. Missing or ambiguous metadata stays Unknown.
+- Source labels describe local coding-session metadata; cloud-only Claude chats are not imported, and Resume still opens your selected terminal.
+
 ## 1.2.1
 
 - Choose a persistent default terminal from the library sidebar or menubar menu: Apple Terminal, Ghostty, or iTerm2.

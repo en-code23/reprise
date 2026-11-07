@@ -18,6 +18,7 @@ final class CaptureCoordinator: ObservableObject {
     @Published var projectDirectory = ""
     @Published var note = ""
     @Published var detectedAutomatically = false
+    @Published var originOverride: SessionOrigin?
     @Published var errorMessage: String?
     @Published var isDropTargeted = false
 
@@ -96,7 +97,7 @@ final class CaptureCoordinator: ObservableObject {
             return
         }
 
-        let session = ResumeSession(
+        var session = ResumeSession(
             model: model,
             project: project.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 ? "Untitled project"
@@ -107,6 +108,7 @@ final class CaptureCoordinator: ObservableObject {
             sourceFileName: sourceURL?.lastPathComponent,
             detectedAutomatically: detectedAutomatically
         )
+        session.originOverride = originOverride
         store?.add(session)
         if store?.storageError == nil { reset() }
         else { errorMessage = store?.storageError }
@@ -123,6 +125,7 @@ final class CaptureCoordinator: ObservableObject {
         projectDirectory = ""
         note = ""
         detectedAutomatically = false
+        originOverride = nil
         errorMessage = nil
         sourceURL = nil
         isDropTargeted = false

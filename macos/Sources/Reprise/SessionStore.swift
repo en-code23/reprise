@@ -33,10 +33,19 @@ final class SessionStore: ObservableObject {
         var session = session
         session.command = CommandParser.canonicalize(session.command)
         if let index = sessions.firstIndex(where: { $0.identityKey == session.identityKey }) {
+            let previous = sessions[index]
+            let detectedOrigin = session.detectedOrigin ?? previous.detectedOrigin
+            let originOverride = session.originOverride ?? previous.originOverride
+            let evidence = session.sourceEvidence ?? previous.sourceEvidence
+            let discoveryKey = session.discoveryKey ?? previous.discoveryKey
             session = ResumeSession(id: sessions[index].id, model: session.model, project: session.project,
                 projectDirectory: session.projectDirectory, note: session.note, command: session.command,
                 createdAt: session.createdAt, sourceFileName: session.sourceFileName,
                 detectedAutomatically: session.detectedAutomatically)
+            session.detectedOrigin = detectedOrigin
+            session.originOverride = originOverride
+            session.sourceEvidence = evidence
+            session.discoveryKey = discoveryKey
             sessions[index] = session
         } else { sessions.insert(session, at: 0) }
         save()
@@ -94,6 +103,11 @@ final class SessionStore: ObservableObject {
         var indices = Dictionary(sessions.enumerated().map { ($0.element.identityKey, $0.offset) }, uniquingKeysWith: { first, _ in first })
         for session in incoming where !dismissed.contains(session.identityKey) {
             if let index = indices[session.identityKey] {
+                if sessions[index].detectedOrigin != session.detectedOrigin || sessions[index].sourceEvidence != session.sourceEvidence {
+                    sessions[index].detectedOrigin = session.detectedOrigin
+                    sessions[index].sourceEvidence = session.sourceEvidence
+                    changed = true
+                }
                 if sessions[index].discoveryKey != nil && sessions[index].createdAt != session.createdAt {
                     sessions[index].createdAt = session.createdAt
                     changed = true

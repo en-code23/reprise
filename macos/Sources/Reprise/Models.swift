@@ -45,6 +45,9 @@ struct ResumeSession: Identifiable, Codable, Hashable, Sendable {
     var sourceFileName: String?
     var detectedAutomatically: Bool
     var discoveryKey: String?
+    var detectedOrigin: SessionOrigin?
+    var originOverride: SessionOrigin?
+    var sourceEvidence: [String]?
 
     init(
         id: UUID = UUID(),
@@ -69,6 +72,7 @@ struct ResumeSession: Identifiable, Codable, Hashable, Sendable {
     }
 
     var identityKey: String { discoveryKey ?? "\(model.rawValue):\(CommandParser.canonicalize(command))" }
+    var origin: SessionOrigin { originOverride ?? detectedOrigin ?? .unknown }
 }
 
 struct ParsedResumeCommand: Sendable {

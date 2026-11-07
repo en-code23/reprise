@@ -175,6 +175,18 @@
         <h2>A few useful details.</h2>
         <div class="question-list">
           <details>
+            <summary>Can I separate desktop app and CLI sessions?</summary>
+            <p>
+              Yes. Session history labels the recorded source, and the All
+              sources menu filters Desktop app, CLI, IDE extension, SDK /
+              automation, Multiple clients, or Unknown. Codex and Claude local
+              coding sessions are detected from their metadata. Missing or
+              ambiguous records stay Unknown; you can correct them in Session
+              details. Regular cloud-only Claude chats are not imported. Resume
+              still uses your chosen terminal.
+            </p>
+          </details>
+          <details>
             <summary>Why might one project have several sessions?</summary>
             <p>
               A CLI creates separate conversations as you work. Reprise keeps

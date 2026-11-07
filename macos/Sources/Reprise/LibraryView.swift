@@ -29,6 +29,7 @@ struct LibraryView: View {
     let newCapture: () -> Void
     @State private var area: LibraryArea = .projects
     @State private var model: AssistantModel?
+    @State private var origin: SessionOrigin?
     @State private var search = ""
     @State private var projectID: String?
     @State private var sessionID: UUID?
@@ -43,7 +44,7 @@ struct LibraryView: View {
 
     private var allGroups: [ProjectGroup] { ProjectLibrary.groups(store.sessions) }
     private var groups: [ProjectGroup] {
-        ProjectLibrary.groups(store.sessions, model: model, query: search).filter { $0.area == area }
+        ProjectLibrary.groups(store.sessions, model: model, query: search, origin: origin).filter { $0.area == area }
     }
     private var project: ProjectGroup? { groups.first { $0.id == projectID } }
     private var session: ResumeSession? { project?.sessions.first { $0.id == sessionID } ?? project?.latest }
@@ -77,6 +78,7 @@ struct LibraryView: View {
             if !ids.contains(projectID ?? "") { projectID = ids.first; sessionID = nil }
         }
         .onChange(of: projectID) { _, _ in sessionID = nil; copied = false; showAllSessions = false }
+        .onChange(of: origin) { _, _ in sessionID = nil; copied = false; showAllSessions = false }
     }
 
     private var sidebar: some View {
@@ -88,7 +90,7 @@ struct LibraryView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("LIBRARY").font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary).padding(.bottom, 6)
                 ForEach(LibraryArea.allCases) { item in
-                    Button { area = item; model = nil } label: {
+                    Button { area = item; model = nil; origin = nil } label: {
                         HStack(spacing: 8) {
                             Image(systemName: item.symbol).frame(width: 16)
                             Text(item == .internalSessions ? "Internal" : item.title)
@@ -146,6 +148,10 @@ struct LibraryView: View {
                 TextField("Search projects or sessions", text: $search).textFieldStyle(.plain).accessibilityLabel("Search projects")
                 if !search.isEmpty { Button { search = "" } label: { Image(systemName: "xmark.circle.fill") }.buttonStyle(.plain) }
             }.font(.system(size: 12)).padding(8).frame(maxWidth: 260).background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 7))
+            Picker("Source", selection: $origin) {
+                Text("All sources").tag(nil as SessionOrigin?)
+                ForEach(SessionOrigin.allCases) { Text($0.title).tag(Optional($0)) }
+            }.labelsHidden().accessibilityLabel("Filter by session source").frame(width: 146)
             Button(action: newCapture) { Label("Add session", systemImage: "plus") }.keyboardShortcut("n")
         }.padding(.horizontal, 24).frame(height: 68)
     }
@@ -162,7 +168,7 @@ struct LibraryView: View {
                     Text(search.isEmpty ? "Nothing here yet" : "No matches").font(.headline)
                     Text(area == .unassigned ? "Saved entries without a project folder appear here." : "Try another filter, sync your local sessions, or add a screenshot.")
                         .font(.callout).foregroundStyle(.secondary)
-                    Button("Clear filters") { search = ""; model = nil }
+                    Button("Clear filters") { search = ""; model = nil; origin = nil }
                 }.padding(16)
             }
             ScrollView {
@@ -261,6 +267,12 @@ struct LibraryView: View {
                         Text(session.command).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
                             .foregroundStyle(Color.repriseBone).padding(14).frame(maxWidth: .infinity, alignment: .leading)
                             .background(Color.repriseTerminal, in: RoundedRectangle(cornerRadius: 8))
+                        Text("Recorded source: \(session.origin.title)\(session.originOverride == nil ? "" : " (manual)")")
+                            .font(.system(size: 11)).foregroundStyle(.secondary)
+                        if session.origin == .unknown {
+                            Text("The local record does not identify its client. Set a source in Session details if you know it.")
+                                .font(.system(size: 11)).foregroundStyle(.secondary)
+                        }
                     }
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
@@ -285,6 +297,7 @@ struct LibraryView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
                         Text(item.model.displayName).fontWeight(.medium)
+                        Text(item.origin.title).foregroundStyle(.secondary)
                         if latest { Text("Latest").font(.system(size: 10)).foregroundStyle(.secondary) }
                     }.font(.system(size: 12))
                     Text(item.createdAt, format: .dateTime.month(.abbreviated).day().hour().minute())
@@ -319,6 +332,13 @@ private struct SessionEditor: View {
             Text("Session details").font(.title2.weight(.semibold))
             Form {
                 TextField("Project name", text: $session.project)
+                Picker("Session source", selection: $session.originOverride) {
+                    Text("Automatic (\((session.detectedOrigin ?? .unknown).title))").tag(nil as SessionOrigin?)
+                    ForEach(SessionOrigin.allCases) { Text($0.title).tag(Optional($0)) }
+                }
+                if let evidence = session.sourceEvidence, !evidence.isEmpty {
+                    Text(evidence.joined(separator: " · ")).font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary).textSelection(.enabled)
+                }
                 TextField("Directory", text: Binding(get: { session.projectDirectory ?? "" }, set: { session.projectDirectory = $0 }))
                 TextField("Command", text: $session.command)
                 TextField("Note", text: $session.note, axis: .vertical).lineLimit(3...6)

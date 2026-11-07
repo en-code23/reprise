@@ -213,6 +213,11 @@ struct CapturePopoverView: View {
                     TextField("Billing portal", text: $coordinator.project)
                 }
 
+                Picker("Session source", selection: $coordinator.originOverride) {
+                    Text("Unknown / not specified").tag(nil as SessionOrigin?)
+                    ForEach(SessionOrigin.allCases.filter { $0 != .unknown }) { Text($0.title).tag(Optional($0)) }
+                }.font(.system(size: 11))
+
                 FieldLabel("PROJECT DIRECTORY · OPTIONAL") {
                     HStack(spacing: 7) {
                         Image(systemName: "folder")
