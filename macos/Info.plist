@@ -28,6 +28,18 @@
     <true/>
     <key>RepriseSingleInstanceProtocol</key>
     <integer>1</integer>
+    <key>SUFeedURL</key>
+    <string>https://github.com/en-code23/reprise/releases/latest/download/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>0hCzFMe1m5dnC73AZA95cnWBoHVkHFPjjQyCqBwq3Zc=</string>
+    <key>SUEnableAutomaticChecks</key>
+    <false/>
+    <key>SUAutomaticallyUpdate</key>
+    <false/>
+    <key>SUVerifyUpdateBeforeExtraction</key>
+    <true/>
+    <key>SURequireSignedFeed</key>
+    <true/>
     <key>NSAppleEventsUsageDescription</key>
     <string>Reprise controls your chosen terminal app to open your project folder and resume the session you choose.</string>
     <key>NSHighResolutionCapable</key>

@@ -43,6 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.coordinator = coordinator
         self.libraryWindowController = library
         self.statusBarController = statusBar
+        AppUpdater.shared.start()
         store.startDiscovery()
         library.show()
     }

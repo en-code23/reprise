@@ -8,7 +8,7 @@ on:
       version:
         description: "Release version (for example 1.0.0)"
         required: true
-        default: "1.4.2"
+        default: "1.5.0"
 
 permissions:
   contents: write
@@ -40,12 +40,26 @@ jobs:
       - name: Test native workflows
         run: swift test --package-path macos
 
-      - name: Publish release
+      - name: Sign update archive and feed
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: ./scripts/make-appcast.sh
+
+      - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.value }}
           name: Reprise v${{ steps.version.outputs.value }}
           generate_release_notes: true
+          draft: true
           files: |
             dist/Reprise-${{ steps.version.outputs.value }}-macOS.dmg
             dist/Reprise-${{ steps.version.outputs.value }}-macOS.zip
+            dist/appcast.xml
+
+      - name: Publish complete release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.value }}
+        run: gh release edit "v$VERSION" --draft=false --latest

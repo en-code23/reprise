@@ -9,10 +9,15 @@ let package = Package(
     products: [
         .executable(name: "Reprise", targets: ["Reprise"])
     ],
+    dependencies: [
+        .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.10.1")
+    ],
     targets: [
         .executableTarget(
             name: "Reprise",
-            path: "Sources/Reprise"
+            dependencies: [.product(name: "Sparkle", package: "Sparkle")],
+            path: "Sources/Reprise",
+            linkerSettings: [.unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])]
         ),
         .testTarget(
             name: "RepriseTests",

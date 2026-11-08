@@ -34,6 +34,18 @@ Older screenshot/manual entries without a folder are preserved under **Unassigne
 
 macOS may ask to allow Reprise to control your selected terminal on first use. Permission can be managed in System Settings → Privacy & Security → Automation. Ghostty requires version 1.3 or newer with AppleScript enabled (`macos-applescript = true`, the default). Reprise uses Ghostty's native window configuration with a project directory and initial command input, preserving your configured shell. See [Ghostty's scripting documentation](https://ghostty.org/docs/features/applescript). Reprise validates commands and quotes directory paths before launching; arbitrary shell scripts are not supported. Custom commands remain copyable.
 
+## Open in your editor
+
+Choose **Default editor** in the library sidebar. Installed editors appear in the menu; use **Choose another editor…** to select any other editor application. The choice is saved. Click **Open in VS Code** (or your selected editor) to open the session's project folder and copy its resume command. Paste it into the editor's terminal to continue that conversation. Reprise opens the folder through macOS, so an editor command-line launcher is not required. It copies the command only after the project opens successfully; it does not run it or change editor configuration.
+
+## In-app updates
+
+Use **Check for updates** at the bottom of the library or in the menubar options. Sparkle shows available updates and downloads, verifies, installs, and relaunches them inside Reprise. Checks are initiated by you. Both the feed and archives are signed with Ed25519; the public key is embedded in the app. Install v1.5.0 once using the DMG to gain this feature in older versions.
+
+Update checks contact GitHub. Saved sessions, commands, screenshots, and project notes are not sent with them.
+
+The release workflow requires the repository secret `SPARKLE_PRIVATE_KEY`. Keep a private backup of the signing seed outside this repository. `scripts/make-appcast.sh` signs the ZIP and feed, verifies the signed feed, and checks the ZIP signature against the public key embedded in the packaged app. It publishes `appcast.xml` with each release; the app reads the latest release's feed. Locally, set `SPARKLE_PRIVATE_KEY_FILE` to a private key file when running the script. Never commit the seed. Sparkle setup follows its [official documentation](https://sparkle-project.org/documentation/).
+
 ## Automatic local discovery
 
 While Reprise is running, it scans `~/.codex/sessions`, `~/.claude/projects`, and `~/.grok/sessions` at startup and every 30 seconds. `CODEX_HOME`, `CLAUDE_CONFIG_DIR`, and `GROK_HOME` are respected when present in the app's environment. Use **Sync now** for an immediate refresh, or turn off **Auto-save local sessions** at the bottom of the library.

@@ -1,5 +1,13 @@
 # Release notes
 
+## 1.5.0
+
+- Add Check for updates in the library sidebar and menubar options. Sparkle downloads, verifies, installs, and relaunches updates from a signed release feed.
+- Sign update archives and feeds with Ed25519 and verify them in the release workflow. Package Sparkle's helpers and preserve framework symlinks. Version comparisons use the release version consistently across local and CI builds.
+- Add a persistent default editor, with installed VS Code, Cursor, Windsurf, Zed, and other editors detected automatically, plus a chooser for any editor application.
+- Open the selected session's project in its editor and copy its resume command only after the editor opens successfully. Report missing folders/editors without changing the clipboard.
+- Keep sidebar navigation scrollable in compact windows while editor, terminal, and update controls stay available.
+
 ## 1.4.2
 
 - Make the entire project card, session row, navigation row, and assistant filter clickable, including transparent padding and space between labels.

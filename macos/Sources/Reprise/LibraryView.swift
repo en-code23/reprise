@@ -37,6 +37,9 @@ struct LibraryView: View {
     @State private var removing: ResumeSession?
     @State private var errorMessage: String?
     @State private var launching = false
+    @State private var openingEditor = false
+    @State private var editorStatus: String?
+    @ObservedObject private var editorPreference = EditorPreference.shared
     @State private var copied = false
     @State private var showAllSessions = false
     @AppStorage(TerminalPreference.key) private var terminalRaw = TerminalApp.terminal.rawValue
@@ -71,22 +74,54 @@ struct LibraryView: View {
             Button("Cancel", role: .cancel) { removing = nil }
             Button("Remove", role: .destructive) { if let removing { store.delete(removing) }; removing = nil }
         } message: { Text("Only this session is removed from Reprise. Its original conversation stays on disk. You can restore it from the library menu.") }
-        .alert("Could not resume", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
+        .alert("Could not open session", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
             Button("OK") { errorMessage = nil }
         } message: { Text(errorMessage ?? "") }
         .onChange(of: groups.map(\.id), initial: true) { _, ids in
             if !ids.contains(projectID ?? "") { projectID = ids.first; sessionID = nil }
         }
-        .onChange(of: projectID) { _, _ in sessionID = nil; copied = false; showAllSessions = false }
+        .onChange(of: projectID) { _, _ in sessionID = nil; copied = false; showAllSessions = false; editorStatus = nil }
+        .onChange(of: sessionID) { _, _ in editorStatus = nil }
         .onChange(of: origin) { _, _ in sessionID = nil; copied = false; showAllSessions = false }
     }
 
     private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 9) {
                 Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 30, height: 30)
                 Text("Reprise").font(.system(size: 17, weight: .semibold))
             }.padding(.top, 24)
+            ScrollView { sidebarNavigation }
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 6) {
+                    Circle().fill(Color.repriseGreen).frame(width: 6, height: 6)
+                    Text(store.isSyncing ? "Syncing…" : "Saved on this Mac").font(.system(size: 11, weight: .medium))
+                }
+                Toggle("Auto-save sessions", isOn: $store.autoDiscovery).toggleStyle(.switch).controlSize(.mini).font(.system(size: 11))
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("DEFAULT TERMINAL").font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
+                    TerminalPreferencePicker().labelsHidden().font(.system(size: 12)).controlSize(.small)
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("DEFAULT EDITOR").font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
+                    EditorPreferenceMenu().font(.system(size: 12)).controlSize(.small)
+                }
+                CheckForUpdatesButton().buttonStyle(RepriseQuietButtonStyle(tint: .primary)).font(.system(size: 11))
+                HStack {
+                    Button("Sync now") { Task { await store.sync() } }.disabled(store.isSyncing)
+                    Spacer()
+                    Menu {
+                        Text(store.syncMessage)
+                        Button("Restore removed sessions") { Task { await store.restoreHiddenSessions() } }
+                    } label: { Image(systemName: "ellipsis").frame(width: 40, height: 40).contentShape(Rectangle()) }
+                        .menuStyle(.borderlessButton).menuIndicator(.hidden).accessibilityLabel("Library options")
+                }.font(.system(size: 11))
+            }
+        }.padding(.horizontal, 14).padding(.bottom, 20).background(Color.repriseCanvas)
+    }
+
+    private var sidebarNavigation: some View {
+        VStack(alignment: .leading, spacing: 24) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("LIBRARY").font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary).padding(.bottom, 6)
                 ForEach(LibraryArea.allCases) { item in
@@ -116,28 +151,7 @@ struct LibraryView: View {
                     }.buttonStyle(RepriseRowButtonStyle()).accessibilityIdentifier("library.assistant.\(assistant.id)")
                 }
             }
-            Spacer()
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 6) {
-                    Circle().fill(Color.repriseGreen).frame(width: 6, height: 6)
-                    Text(store.isSyncing ? "Syncing…" : "Saved on this Mac").font(.system(size: 11, weight: .medium))
-                }
-                Toggle("Auto-save sessions", isOn: $store.autoDiscovery).toggleStyle(.switch).controlSize(.mini).font(.system(size: 11))
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("DEFAULT TERMINAL").font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
-                    TerminalPreferencePicker().labelsHidden().font(.system(size: 12)).controlSize(.small)
-                }
-                HStack {
-                    Button("Sync now") { Task { await store.sync() } }.disabled(store.isSyncing)
-                    Spacer()
-                    Menu {
-                        Text(store.syncMessage)
-                        Button("Restore removed sessions") { Task { await store.restoreHiddenSessions() } }
-                    } label: { Image(systemName: "ellipsis").frame(width: 40, height: 40).contentShape(Rectangle()) }
-                        .menuStyle(.borderlessButton).menuIndicator(.hidden).accessibilityLabel("Library options")
-                }.font(.system(size: 11))
-            }
-        }.padding(.horizontal, 14).padding(.bottom, 20).background(Color.repriseCanvas)
+        }.frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var toolbar: some View {
@@ -252,6 +266,18 @@ struct LibraryView: View {
                             copied = true; Task { try? await Task.sleep(for: .seconds(1.5)); copied = false }
                         }.buttonStyle(RepriseQuietButtonStyle()).font(.system(size: 12))
                     }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Button {
+                            openInEditor(session, project: project)
+                        } label: {
+                            Label(openingEditor ? "Opening editor…" : "Open in \(editorPreference.selected?.name ?? "editor")", systemImage: "curlybraces.square")
+                                .font(.system(size: 13, weight: .medium)).padding(.vertical, 4)
+                        }
+                        .buttonStyle(.bordered).disabled(openingEditor)
+                        .help("Open this project in your editor and copy the selected resume command")
+                        Text(editorStatus ?? "Opens the project and copies this session’s resume command.")
+                            .font(.system(size: 11)).foregroundStyle(.secondary)
+                    }
                     Divider()
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
@@ -327,6 +353,20 @@ struct LibraryView: View {
             store.assignDirectory(path, to: Set(project.sessions.map(\.id)))
             area = ProjectLibrary.area(for: path)
             projectID = "directory:" + (ProjectLibrary.normalizedDirectory(path) ?? path)
+        }
+    }
+
+    private func openInEditor(_ session: ResumeSession, project: ProjectGroup) {
+        guard project.directory != nil else { chooseDirectory(project); return }
+        if editorPreference.selected == nil { editorPreference.chooseApplication() }
+        guard let editor = editorPreference.selected else { return }
+        openingEditor = true
+        Task {
+            defer { openingEditor = false }
+            do {
+                try await EditorLauncher.open(session, editor: editor)
+                if projectID == project.id { editorStatus = "Opened in \(editor.name). Resume command copied." }
+            } catch { errorMessage = error.localizedDescription }
         }
     }
 }

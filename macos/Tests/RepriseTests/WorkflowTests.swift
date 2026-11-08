@@ -101,7 +101,8 @@ final class WorkflowTests: XCTestCase {
         for (name, size, appearance) in [
             ("library-light", NSSize(width: 1180, height: 800), NSAppearance.Name.aqua),
             ("library-dark", NSSize(width: 1180, height: 800), NSAppearance.Name.darkAqua),
-            ("library-dark-compact", NSSize(width: 1000, height: 720), NSAppearance.Name.darkAqua)
+            ("library-dark-compact", NSSize(width: 1000, height: 720), NSAppearance.Name.darkAqua),
+            ("library-dark-minimum", NSSize(width: 1000, height: 640), NSAppearance.Name.darkAqua)
         ] {
             let view = NSHostingView(rootView: LibraryView(store: store, newCapture: {}).environment(\.locale, Locale(identifier: "en_US")))
             view.frame = NSRect(origin: .zero, size: size)
