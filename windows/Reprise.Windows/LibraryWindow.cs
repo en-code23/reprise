@@ -8,7 +8,7 @@ internal sealed class LibraryWindow : Form
     private readonly NotifyIcon tray;
     private readonly System.Windows.Forms.Timer timer = new() { Interval = 30_000 };
     private readonly ListBox projects = new() { Dock = DockStyle.Fill, DrawMode = DrawMode.OwnerDrawFixed, ItemHeight = 82, BorderStyle = BorderStyle.None, IntegralHeight = false };
-    private readonly DataGridView history = new() { ReadOnly = true, AllowUserToAddRows = false, AllowUserToDeleteRows = false, MultiSelect = false, SelectionMode = DataGridViewSelectionMode.FullRowSelect, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, BackgroundColor = Color.White, BorderStyle = BorderStyle.None, Height = 210 };
+    private readonly DataGridView history = new() { ReadOnly = true, AllowUserToAddRows = false, AllowUserToDeleteRows = false, MultiSelect = false, SelectionMode = DataGridViewSelectionMode.FullRowSelect, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, BackgroundColor = Color.White, BorderStyle = BorderStyle.None, Height = 160 };
     private readonly ComboBox model = Theme.Combo(["All assistants", "codex", "claude", "grok", "other"]);
     private readonly ComboBox source = Theme.Combo(["All sources", .. NativeServices.Origins]);
     private readonly ComboBox terminal = Theme.Combo(NativeServices.Terminals);
@@ -113,8 +113,8 @@ internal sealed class LibraryWindow : Form
         count.Dock = DockStyle.Top; count.Height = 32; count.AutoSize = false; listPanel.Controls.Add(projects); listPanel.Controls.Add(count); split.Panel1.Controls.Add(listPanel);
         projects.BackColor = Color.White; projects.DrawItem += DrawProject; projects.SelectedIndexChanged += (_, _) => { if (!refreshing) BindProject(); };
         var detail = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Padding = new Padding(22), BackColor = Theme.Paper };
-        title.AutoSize = false; title.MaximumSize = Size.Empty; title.MinimumSize = new Size(0, 50); title.Height = 50; title.AutoEllipsis = true;
-        path.AutoSize = false; path.MaximumSize = Size.Empty; path.MinimumSize = new Size(0, 44); path.Height = 44; path.AutoEllipsis = true; path.ForeColor = Theme.Secondary;
+        title.AutoSize = false; title.MaximumSize = Size.Empty; title.MinimumSize = new Size(0, 36); title.Height = 36; title.AutoEllipsis = true;
+        path.AutoSize = false; path.MaximumSize = Size.Empty; path.MinimumSize = new Size(0, 30); path.Height = 30; path.AutoEllipsis = true; path.ForeColor = Theme.Secondary;
         detail.Controls.Add(title); detail.Controls.Add(path);
         var actions = new FlowLayoutPanel { AutoSize = true, WrapContents = true, Margin = new Padding(0, 0, 0, 10) };
         actions.Controls.AddRange([resume, editor, copy, edit, remove]); detail.Controls.Add(actions);
@@ -123,8 +123,13 @@ internal sealed class LibraryWindow : Form
         history.DefaultCellStyle.SelectionBackColor = Theme.Sage; history.DefaultCellStyle.SelectionForeColor = Theme.Ink; history.DefaultCellStyle.Padding = new Padding(5);
         history.Columns.Add("Assistant", "Assistant"); history.Columns.Add("Source", "Source"); history.Columns.Add("Updated", "Saved"); history.Columns.Add("Session", "Session");
         history.SelectionChanged += (_, _) => { if (!refreshing) ShowSession(); };
-        detail.Controls.Add(history); detail.Controls.Add(Theme.Label("RESUME COMMAND", 9, true)); detail.Controls.Add(command); detail.Controls.Add(origin);
-        detail.Controls.Add(Theme.Label("Project note", 12, true)); detail.Controls.Add(note);
+        detail.Controls.Add(history);
+        var sessionDetails = new TabControl { Height = 145, Margin = new Padding(0, 10, 0, 8) };
+        var commandPage = new TabPage("Resume command"); var notePage = new TabPage("Project note");
+        command.Dock = DockStyle.Fill; note.Dock = DockStyle.Fill;
+        command.MinimumSize = Size.Empty; note.MinimumSize = Size.Empty;
+        commandPage.Controls.Add(command); notePage.Controls.Add(note);
+        sessionDetails.TabPages.AddRange([commandPage, notePage]); detail.Controls.Add(sessionDetails); detail.Controls.Add(origin);
         detail.Controls.Add(Theme.Label("Drop a terminal screenshot anywhere in this window to add it. Closing this window keeps Reprise in the tray.", 9));
         detail.SizeChanged += (_, _) =>
         {
@@ -172,8 +177,9 @@ internal sealed class LibraryWindow : Form
         if (CurrentProject is { } group)
             foreach (var session in group.Sessions)
             {
-                var index = history.Rows.Add(session.Model, session.Origin, session.CreatedAt.ToLocalTime().ToString("g"), session.Command.Split(' ').LastOrDefault() is { } id ? id[^Math.Min(8, id.Length)..] : "");
+                var index = history.Rows.Add(session.Model, session.Origin, session.CreatedAt.ToLocalTime().ToString("MMM d"), session.Command.Split(' ').LastOrDefault() is { } id ? id[^Math.Min(8, id.Length)..] : "");
                 history.Rows[index].Tag = session;
+                history.Rows[index].Cells[2].ToolTipText = session.CreatedAt.ToLocalTime().ToString("f");
             }
         if (history.Rows.Count > 0) { history.ClearSelection(); history.Rows[0].Selected = true; }
         refreshing = false; ShowSession();
