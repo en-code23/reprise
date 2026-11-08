@@ -1,5 +1,10 @@
 # Release notes
 
+## 1.5.1
+
+- Match the app icon to the website's forest green, warm off-white, and pale sage palette. Flatten the glossy blue treatment while preserving the stacked-session and play-cutout identity.
+- Update the app icon package, website mark, favicon, and native app previews together.
+
 ## 1.5.0
 
 - Add Check for updates in the library sidebar and menubar options. Sparkle downloads, verifies, installs, and relaunches updates from a signed release feed.

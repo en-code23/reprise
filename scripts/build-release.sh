@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="${0:A:h:h}"
-VERSION="${VERSION:-1.5.0}"
+VERSION="${VERSION:-1.5.1}"
 SIGN_IDENTITY="${SIGN_IDENTITY:--}"
 DIST_DIR="$ROOT_DIR/dist"
 STAGING_DIR="$(mktemp -d "${TMPDIR:-/tmp}/reprise-release.XXXXXX")"
