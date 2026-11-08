@@ -97,10 +97,10 @@ struct LibraryView: View {
                             Spacer(minLength: 2)
                             Text("\(count(item))").monospacedDigit().foregroundStyle(.secondary)
                         }.font(.system(size: 12, weight: area == item ? .semibold : .regular))
-                            .padding(.horizontal, 9).frame(height: 36)
+                            .padding(.horizontal, 9).frame(height: 40)
                             .foregroundStyle(.primary)
                             .background(area == item ? Color.primary.opacity(0.07) : .clear, in: RoundedRectangle(cornerRadius: 7))
-                    }.buttonStyle(.plain)
+                    }.buttonStyle(RepriseRowButtonStyle()).accessibilityIdentifier("library.area.\(item.id)")
                 }
             }
             VStack(alignment: .leading, spacing: 8) {
@@ -112,8 +112,8 @@ struct LibraryView: View {
                             Text(assistant.displayName)
                             Spacer()
                             if model == assistant { Image(systemName: "checkmark") }
-                        }.font(.system(size: 12)).foregroundStyle(.primary).frame(height: 28)
-                    }.buttonStyle(.plain)
+                        }.font(.system(size: 12)).foregroundStyle(.primary).frame(height: 40)
+                    }.buttonStyle(RepriseRowButtonStyle()).accessibilityIdentifier("library.assistant.\(assistant.id)")
                 }
             }
             Spacer()
@@ -133,7 +133,8 @@ struct LibraryView: View {
                     Menu {
                         Text(store.syncMessage)
                         Button("Restore removed sessions") { Task { await store.restoreHiddenSessions() } }
-                    } label: { Image(systemName: "ellipsis") }.menuStyle(.borderlessButton).frame(width: 20)
+                    } label: { Image(systemName: "ellipsis").frame(width: 40, height: 40).contentShape(Rectangle()) }
+                        .menuStyle(.borderlessButton).menuIndicator(.hidden).accessibilityLabel("Library options")
                 }.font(.system(size: 11))
             }
         }.padding(.horizontal, 14).padding(.bottom, 20).background(Color.repriseCanvas)
@@ -146,7 +147,11 @@ struct LibraryView: View {
             HStack(spacing: 7) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
                 TextField("Search projects or sessions", text: $search).textFieldStyle(.plain).accessibilityLabel("Search projects")
-                if !search.isEmpty { Button { search = "" } label: { Image(systemName: "xmark.circle.fill") }.buttonStyle(.plain) }
+                if !search.isEmpty {
+                    Button { search = "" } label: { Image(systemName: "xmark.circle.fill") }
+                        .buttonStyle(RepriseQuietButtonStyle(minimumSize: 32, tint: .secondary))
+                        .accessibilityLabel("Clear search")
+                }
             }.font(.system(size: 12)).padding(8).frame(maxWidth: 260).background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 7))
             Picker("Source", selection: $origin) {
                 Text("All sources").tag(nil as SessionOrigin?)
@@ -193,7 +198,7 @@ struct LibraryView: View {
                                 }
                             }.foregroundStyle(.primary).padding(12).frame(maxWidth: .infinity, alignment: .leading)
                                 .background(projectID == group.id ? Color.repriseGreen.opacity(0.13) : .clear, in: RoundedRectangle(cornerRadius: 9))
-                        }.buttonStyle(.plain)
+                        }.buttonStyle(RepriseRowButtonStyle()).accessibilityIdentifier("library.project.\(group.id)")
                     }
                 }.padding(.horizontal, 8)
             }
@@ -215,7 +220,8 @@ struct LibraryView: View {
                                 if let directory = project.directory { Button("Show in Finder") { NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: directory) } }
                                 Divider()
                                 Button("Remove selected session", role: .destructive) { removing = session }
-                            } label: { Image(systemName: "ellipsis") }.menuStyle(.borderlessButton).frame(width: 28)
+                            } label: { Image(systemName: "ellipsis").frame(width: 40, height: 40).contentShape(Rectangle()) }
+                                .menuStyle(.borderlessButton).menuIndicator(.hidden).accessibilityLabel("Project options")
                         }
                         Text(project.title).font(.system(size: 30, weight: .semibold)).tracking(-0.7).textSelection(.enabled)
                         Text(project.displayDirectory).font(.system(size: 12, design: .monospaced)).foregroundStyle(.secondary).textSelection(.enabled)
@@ -244,7 +250,7 @@ struct LibraryView: View {
                         Button(copied ? "Copied" : "Copy command") {
                             NSPasteboard.general.clearContents(); NSPasteboard.general.setString(session.command, forType: .string)
                             copied = true; Task { try? await Task.sleep(for: .seconds(1.5)); copied = false }
-                        }.buttonStyle(.borderless).font(.system(size: 12))
+                        }.buttonStyle(RepriseQuietButtonStyle()).font(.system(size: 12))
                     }
                     Divider()
                     VStack(alignment: .leading, spacing: 12) {
@@ -259,12 +265,13 @@ struct LibraryView: View {
                         }
                         if project.sessions.count > 4 {
                             Button(showAllSessions ? "Show recent sessions" : "Show all \(project.sessions.count) sessions") { showAllSessions.toggle() }
-                                .buttonStyle(.link).font(.system(size: 12))
+                                .buttonStyle(RepriseQuietButtonStyle()).font(.system(size: 12))
                         }
                     }
                     VStack(alignment: .leading, spacing: 8) {
                         Text("COMMAND").font(.system(size: 10, weight: .semibold)).tracking(1).foregroundStyle(.secondary)
                         Text(session.command).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
+                            .accessibilityIdentifier("session.command")
                             .foregroundStyle(Color.repriseBone).padding(14).frame(maxWidth: .infinity, alignment: .leading)
                             .background(Color.repriseTerminal, in: RoundedRectangle(cornerRadius: 8))
                         Text("Recorded source: \(session.origin.title)\(session.originOverride == nil ? "" : " (manual)")")
@@ -278,7 +285,8 @@ struct LibraryView: View {
                         HStack {
                             Text("Session note").font(.system(size: 13, weight: .semibold))
                             Spacer()
-                            Button(session.note.isEmpty ? "Add note" : "Edit") { editing = session }.buttonStyle(.link).font(.system(size: 12))
+                            Button(session.note.isEmpty ? "Add note" : "Edit") { editing = session }
+                                .buttonStyle(RepriseQuietButtonStyle()).font(.system(size: 12))
                         }
                         Text(session.note.isEmpty ? "What would you like to pick up next?" : session.note)
                             .font(.system(size: 13)).foregroundStyle(.secondary).textSelection(.enabled)
@@ -309,7 +317,7 @@ struct LibraryView: View {
                 Image(systemName: selected ? "checkmark.circle.fill" : "circle").foregroundStyle(selected ? Color.repriseGreen : Color.secondary.opacity(0.4))
             }.foregroundStyle(.primary).padding(10).frame(maxWidth: .infinity)
                 .background(selected ? Color.repriseGreen.opacity(0.08) : .clear, in: RoundedRectangle(cornerRadius: 7))
-        }.buttonStyle(.plain)
+        }.buttonStyle(RepriseRowButtonStyle()).accessibilityIdentifier("library.session.\(item.id)")
     }
 
     private func chooseDirectory(_ project: ProjectGroup) {

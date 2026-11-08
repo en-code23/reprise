@@ -55,7 +55,8 @@ struct CapturePopoverView: View {
                 } label: {
                     Image(systemName: "xmark")
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(RepriseQuietButtonStyle(tint: .primary))
+                .accessibilityLabel("Cancel capture")
                 .help("Cancel capture")
             }
         }
@@ -84,7 +85,7 @@ struct CapturePopoverView: View {
             )
 
             Button("Enter a command manually") { coordinator.startManual() }
-                .buttonStyle(.link)
+                .buttonStyle(RepriseQuietButtonStyle())
 
             if let error = coordinator.errorMessage {
                 Label(error, systemImage: "exclamationmark.circle")
@@ -101,7 +102,7 @@ struct CapturePopoverView: View {
                             .foregroundStyle(.tertiary)
                         Spacer()
                         Button("Open library", action: openLibrary)
-                            .buttonStyle(.link)
+                            .buttonStyle(RepriseQuietButtonStyle())
                             .font(.system(size: 11, weight: .semibold))
                     }
 
@@ -268,7 +269,7 @@ struct CapturePopoverView: View {
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
             Spacer()
-            Button("Library", action: openLibrary).buttonStyle(.link)
+            Button("Library", action: openLibrary).buttonStyle(RepriseQuietButtonStyle())
             Menu {
                 Button("Open Library", action: openLibrary)
                 TerminalPreferencePicker()
@@ -276,13 +277,14 @@ struct CapturePopoverView: View {
                 Button("Quit Reprise", action: quit)
                     .keyboardShortcut("q")
             } label: {
-                Image(systemName: "ellipsis.circle")
+                Image(systemName: "ellipsis.circle").frame(width: 40, height: 40).contentShape(Rectangle())
             }
             .menuStyle(.borderlessButton)
-            .frame(width: 26)
+            .menuIndicator(.hidden)
+            .accessibilityLabel("Reprise options")
         }
         .padding(.horizontal, 16)
-        .frame(height: 40)
+        .frame(height: 48)
     }
 }
 
@@ -317,7 +319,7 @@ private struct DropTargetCard: View {
                 .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 235)
+        .frame(height: 220)
         .background(
             (isTargeted ? Color.repriseGreen.opacity(0.12) : Color.repriseCanvas),
             in: RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -388,7 +390,8 @@ private struct CompactSessionRow: View {
             } label: {
                 Image(systemName: "doc.on.doc")
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(RepriseQuietButtonStyle(tint: .primary))
+            .accessibilityLabel("Copy resume command")
             .help("Copy resume command")
         }
     }

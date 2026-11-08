@@ -1,5 +1,12 @@
 # Release notes
 
+## 1.4.2
+
+- Make the entire project card, session row, navigation row, and assistant filter clickable, including transparent padding and space between labels.
+- Give copy, library, note, history, cancel, and other small text/icon actions padded hit areas, with press feedback and disabled states.
+- Enlarge sidebar rows and options menu labels, label icon-only controls for accessibility, and keep the capture popup within its available space.
+- Add mouse-event regression tests covering empty row space, icon padding, control boundaries, and disabled actions.
+
 ## 1.4.1
 
 - Keep a single running Reprise instance across installed and build-folder copies, preventing duplicate menubar icons and concurrent library writers.

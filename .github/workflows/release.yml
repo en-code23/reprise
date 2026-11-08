@@ -8,7 +8,7 @@ on:
       version:
         description: "Release version (for example 1.0.0)"
         required: true
-        default: "1.4.1"
+        default: "1.4.2"
 
 permissions:
   contents: write

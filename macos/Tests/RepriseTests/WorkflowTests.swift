@@ -118,21 +118,25 @@ final class WorkflowTests: XCTestCase {
             window.orderOut(nil)
         }
         let capture = CaptureCoordinator(store: store)
-        capture.startManual()
-        capture.project = "Billing portal"
-        capture.projectDirectory = "/Users/developer/Projects/billing-portal"
-        capture.command = "codex resume \(identifier)"
-        let view = NSHostingView(rootView: CapturePopoverView(coordinator: capture, store: store, openLibrary: {}, quit: {}))
-        view.frame = NSRect(x: 0, y: 0, width: 480, height: 620)
-        let window = NSWindow(contentRect: view.frame, styleMask: [.borderless], backing: .buffered, defer: false)
-        window.contentView = view
-        view.layoutSubtreeIfNeeded()
-        RunLoop.main.run(until: Date().addingTimeInterval(0.25))
-        let bitmap = try XCTUnwrap(view.bitmapImageRepForCachingDisplay(in: view.bounds))
-        view.cacheDisplay(in: view.bounds, to: bitmap)
-        try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
-            .write(to: URL(fileURLWithPath: output).appendingPathComponent("capture-review.png"))
-        window.orderOut(nil)
+        for name in ["capture-idle", "capture-review"] {
+            if name == "capture-review" {
+                capture.startManual()
+                capture.project = "Billing portal"
+                capture.projectDirectory = "/Users/developer/Projects/billing-portal"
+                capture.command = "codex resume \(identifier)"
+            }
+            let view = NSHostingView(rootView: CapturePopoverView(coordinator: capture, store: store, openLibrary: {}, quit: {}))
+            view.frame = NSRect(x: 0, y: 0, width: 480, height: 620)
+            let window = NSWindow(contentRect: view.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+            window.contentView = view
+            view.layoutSubtreeIfNeeded()
+            RunLoop.main.run(until: Date().addingTimeInterval(0.25))
+            let bitmap = try XCTUnwrap(view.bitmapImageRepForCachingDisplay(in: view.bounds))
+            view.cacheDisplay(in: view.bounds, to: bitmap)
+            try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
+                .write(to: URL(fileURLWithPath: output).appendingPathComponent("\(name).png"))
+            window.orderOut(nil)
+        }
     }
 
     func testLiveDiscoveryWhenRequested() {
