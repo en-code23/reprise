@@ -90,6 +90,13 @@ html {
 .button:active {
   transform: scale(0.98);
 }
+.button.secondary {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+.button.secondary:hover { background: var(--accent-soft); }
+.hero-actions { flex-wrap: wrap; }
 .button.small {
   min-height: 38px;
   font-size: 12px;
@@ -169,14 +176,14 @@ h1 span {
   font-size: 13px;
   font-weight: 600;
 }
-.appearance {
+.appearance, .platforms {
   display: flex;
   gap: 2px;
   background: var(--accent-soft);
   padding: 3px;
   border-radius: 7px;
 }
-.appearance button {
+.appearance button, .platforms button {
   border: 0;
   background: transparent;
   padding: 6px 14px;
@@ -184,10 +191,12 @@ h1 span {
   font-size: 11px;
   cursor: pointer;
 }
-.appearance button[aria-pressed="true"] {
+.appearance button[aria-pressed="true"], .platforms button[aria-pressed="true"] {
   background: var(--surface);
   box-shadow: 0 1px 3px #20271f12;
 }
+.preview-controls { gap: 12px; flex-wrap: wrap; }
+.window-bar[hidden], .appearance[hidden] { display: none; }
 .app-window {
   overflow: hidden;
   border: 1px solid #cdd5c9;
@@ -237,6 +246,7 @@ h1 span {
   font-size: 11px;
   text-align: center;
 }
+.preview-caption a { color: var(--accent); text-decoration: underline; margin-left: 8px; }
 .features {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

@@ -1,5 +1,14 @@
 # Release notes
 
+## 1.6.0
+
+- Add a native Windows x64 system-tray app, a self-contained EXE installer, portable ZIP, and Velopack update packages alongside the existing Mac release.
+- Discover local Windows Codex, Claude, and Grok Build session metadata, group by Windows project directory, distinguish sources, preserve edited notes, and keep Unassigned/Internal views separate.
+- Import screenshots using bundled offline Tesseract/English OCR, with editable review and manual command entry. Screenshots can be dropped into the library/capture window or chosen from the tray menu.
+- Resume in Windows Terminal, PowerShell, or Command Prompt with validated command arguments and literal project paths. Open an editor executable and copy the selected resume command.
+- Keep Windows data outside the installation directory, prevent duplicate app instances, preserve unreadable libraries, and support restoring removed imports.
+- Build/test both platforms before publishing one release; verify Windows UI, OCR, command quoting, and installer startup on a Windows runner. Add separate platform downloads and previews to the website.
+
 ## 1.5.1
 
 - Match the app icon to the website's forest green, warm off-white, and pale sage palette. Flatten the glossy blue treatment while preserving the stacked-session and play-cutout identity.

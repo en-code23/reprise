@@ -1,8 +1,8 @@
 # Reprise
 
-Reprise is a native macOS menubar app that automatically collects local Codex, Claude, and Grok Build sessions, and turns terminal screenshots into an organized library of AI coding-session resume commands.
+Reprise has native Mac menubar and Windows system-tray apps. It automatically collects local Codex, Claude, and Grok Build sessions, and turns terminal screenshots into an organized library of AI coding-session resume commands.
 
-Drop a screenshot on the Reprise status icon. Apple Vision OCR detects commands such as:
+On Mac, drop a screenshot on the Reprise status icon. On Windows, add it through the tray menu or drop it into the library window. Local OCR detects commands such as:
 
 ```sh
 codex resume session-id
@@ -10,7 +10,29 @@ claude --resume session-id
 grok --resume session-id
 ```
 
-The app lets you review the detected assistant and command, add or detect the project directory, attach a project name and note, then copy the command later from a grouped local library. Screenshots are processed on-device and are never uploaded.
+The app lets you review the detected assistant and command, add or detect the project directory, attach a project name and note, then copy the command later from a grouped local library. Screenshots are processed on-device and are never uploaded. Mac uses Apple Vision; Windows bundles Tesseract and an English OCR model.
+
+## Windows download
+
+Download **Reprise-win-Setup.exe** from the [latest release](https://github.com/en-code23/reprise/releases/latest). The x64 installer bundles the .NET runtime, OCR engine, English model, and app-local Visual C++ runtime files. A portable ZIP is also available. Windows builds are currently unsigned.
+
+The Windows app lives in the notification area/system tray. Click its icon to open the library; closing the window keeps it running. Use its tray menu to add a screenshot, or drop a PNG, JPG, BMP, or TIFF into the library/capture window. Windows does not support dropping files directly onto this tray icon. Review OCR results before saving, or enter a command manually.
+
+Windows groups sessions by Windows project directory, with Projects, Unassigned, and Internal views, assistant/source filters, notes, and history. It reads native Windows Codex, Claude, and Grok session metadata from your user profile, respecting `CODEX_HOME`, `CLAUDE_CONFIG_DIR`, and `GROK_HOME`. Linux/WSL transcript folders and cloud-only chat histories are not automatically imported.
+
+Choose **Windows Terminal**, **PowerShell**, or **Command Prompt** as the default terminal. The relevant Windows CLI must be installed, on PATH, and signed in. Opening an editor accepts an editor `.exe`, opens the project folder, and copies the selected command. Installer builds support **Check for updates** through Velopack; portable copies are replaced manually. Windows updates use GitHub release packages and their checksums; the separate Mac feed uses Sparkle/Ed25519 signatures.
+
+Windows sessions and preferences live in `%LOCALAPPDATA%\RepriseLibrary`, outside the install directory. Closing or updating the app preserves them; the original CLI session files are never modified.
+
+Build on Windows with .NET 10 and the Visual Studio C++ redistributable files available:
+
+```powershell
+./scripts/build-windows.ps1 -Version 1.6.0
+```
+
+The script runs core checks, publishes a self-contained app, verifies its UI/OCR on Windows, and builds the installer and update packages with pinned Velopack tooling. `-TestInstaller` additionally installs and tests the package on a clean CI runner. Windows previews are saved under `build/windows/qa/`. Run the portable core checks on any .NET 10 host with `dotnet run --project windows/Reprise.Core.Tests -c Release`.
+
+The remaining sections describe the Mac app unless stated otherwise.
 
 ## Resume your work
 
@@ -82,7 +104,7 @@ Run native parser, discovery, persistence, and terminal-launch validation with `
 
 ## Download site
 
-The static GitHub Pages site lives in `docs/`. It looks up the latest GitHub Release and points the download button at its DMG automatically.
+The static GitHub Pages site lives in `docs/`. It looks up the latest GitHub Release and provides separate Mac DMG and Windows EXE downloads. The main download button follows the visitor's platform.
 
 ## Releases
 
@@ -97,7 +119,7 @@ The initial workflow uses an ad-hoc signature. For a frictionless public downloa
 
 ## Prototype
 
-The original browser prototype remains in `src/` as a design reference. The shipping product is the native Swift app under `macos/`.
+The original browser prototype remains in `src/` as a design reference. The shipping apps are the native Swift app under `macos/` and native WinForms app under `windows/`.
 
 ## License
 
