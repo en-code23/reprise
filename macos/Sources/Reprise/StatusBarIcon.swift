@@ -1,25 +1,31 @@
 import AppKit
 
-/// A deliberately simplified version of the app mark for the 18pt menu bar.
+/// Stacked session cards with a play cutout, simplified for the 18pt menu bar.
 @MainActor
 enum StatusBarIcon {
     static func make() -> NSImage {
         let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { _ in
             NSColor.black.setStroke()
-            let mark = NSBezierPath()
-            mark.lineWidth = 2.4
-            mark.lineCapStyle = .round
-            mark.lineJoinStyle = .round
-            mark.move(to: NSPoint(x: 4, y: 14))
-            mark.line(to: NSPoint(x: 9, y: 9))
-            mark.line(to: NSPoint(x: 4, y: 4))
-            mark.curve(to: NSPoint(x: 6, y: 2.5), controlPoint1: NSPoint(x: 2.5, y: 2.5), controlPoint2: NSPoint(x: 4.5, y: 2.5))
-            mark.line(to: NSPoint(x: 11.5, y: 2.5))
-            mark.curve(to: NSPoint(x: 14, y: 5), controlPoint1: NSPoint(x: 13.3, y: 2.5), controlPoint2: NSPoint(x: 14, y: 3.2))
-            mark.line(to: NSPoint(x: 14, y: 8))
-            mark.stroke()
+            let back = NSBezierPath()
+            back.lineWidth = 1.5
+            back.lineCapStyle = .round
+            back.lineJoinStyle = .round
+            back.move(to: NSPoint(x: 2.5, y: 6))
+            back.line(to: NSPoint(x: 2.5, y: 12))
+            back.curve(to: NSPoint(x: 4.5, y: 14), controlPoint1: NSPoint(x: 2.5, y: 13.1), controlPoint2: NSPoint(x: 3.4, y: 14))
+            back.line(to: NSPoint(x: 12, y: 14))
+            back.stroke()
+
             NSColor.black.setFill()
-            NSBezierPath(roundedRect: NSRect(x: 12.5, y: 9.5, width: 3, height: 3), xRadius: 0.8, yRadius: 0.8).fill()
+            let front = NSBezierPath(roundedRect: NSRect(x: 5, y: 3, width: 11.5, height: 9), xRadius: 2, yRadius: 2)
+            front.windingRule = .evenOdd
+            let play = NSBezierPath()
+            play.move(to: NSPoint(x: 9, y: 5.25))
+            play.line(to: NSPoint(x: 13, y: 7.5))
+            play.line(to: NSPoint(x: 9, y: 9.75))
+            play.close()
+            front.append(play)
+            front.fill()
             return true
         }
         image.isTemplate = true

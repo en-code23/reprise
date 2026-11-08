@@ -1,14 +1,12 @@
-# Reprise icon refinement
+# Reprise icon: stacked sessions
 
-Generated with the built-in ImageGen tool, then resized for the macOS icon package. The matching menubar template is drawn with AppKit in `StatusBarIcon.swift` so it remains sharp and follows the system appearance.
+Created from scratch with the built-in ImageGen tool for v1.4.1, then resized to a 1024px master for the macOS icon package. Transparent outer corners are preserved. The matching monochrome menubar symbol is drawn with AppKit in `StatusBarIcon.swift` for sharp rendering in both system appearances.
 
-## Generation prompt
+## Final generation prompt
 
-Use case: style-transfer
-Asset type: production macOS application icon for Reprise, a developer utility for saving and resuming terminal sessions.
-Input image: existing Reprise app icon, edit target and brand reference.
-Primary request: Redesign this icon into a much cleaner, more intentional native Mac icon. Preserve the idea of a terminal prompt turning into a return loop, but simplify its awkward oversized loop and detached bookmark into one bold, compact, optically centered cream terminal-return glyph with a small integrated sage-green terminal cursor. Make the symbol instantly readable at 32 pixels.
-Style: precise premium icon design, front-facing orthographic view, smoothly rounded graphite squircle, near-flat satin surface, extremely restrained dimensional depth, crisp edges, broad consistent strokes. Subtle upper-edge lighting only.
-Palette: deep graphite tile, warm ivory glyph, desaturated sage green cursor. Retain the restrained Reprise identity.
-Composition: one app tile centered on a 1024 by 1024 transparent canvas, tile occupying approximately 84% of canvas width, generous consistent inner spacing. Transparent outside the squircle, including corners. No surrounding dark backdrop.
-Constraints: no words, no letters, no logo text, no watermark, no separate decorative objects, no photographic grain or texture, no thick border, no chrome bevel, no cast shadow outside the tile, no perspective. The glyph should resemble a clever combination of > terminal prompt and a return arrow, not a shopping bag or hook.
+Use case: logo-brand
+Asset type: production macOS app icon for Reprise, a utility that saves developer sessions and lets people pick up their work again.
+Primary request: Create an entirely new icon from scratch: two offset session cards, with a bold play triangle cut into the front card, representing saved work ready to resume. Make this a distinctive, beautifully balanced Mac app icon. A minimal sculpted ivory front card with softly rounded corners sits over one slightly offset periwinkle card. The triangular cutout reveals the rich deep blue of the tile. Only these two large card shapes and the play cutout; strong silhouette, generous spacing, clear at 32 pixels.
+Style: precise contemporary native macOS icon, front-facing, near-flat with restrained satin depth and gentle top-edge illumination. Crisp geometric contours. Rich blue rounded-square app tile. No typography, no letters, no text.
+Composition: a single centered app tile occupying approximately 84 percent of a square 1024x1024 canvas. Transparent background outside the rounded square, including outer corners. Card stack optically centered with generous padding inside the tile.
+Constraints: genuinely transparent outside the tile; no external shadow, no mockup, no environment, no terminal chevron, no return arrow, no loop, no cursor, no gradients across the glyph, no decorative dots, no watermark. Render the finished icon only.

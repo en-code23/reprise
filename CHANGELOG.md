@@ -1,5 +1,11 @@
 # Release notes
 
+## 1.4.1
+
+- Keep a single running Reprise instance across installed and build-folder copies, preventing duplicate menubar icons and concurrent library writers.
+- Bring the existing library forward when another copy is opened. Release the instance lock automatically on quit or crash.
+- Replace the app icon from scratch with blue stacked session cards and a play cutout, plus a matching monochrome menubar symbol.
+
 ## 1.4.0
 
 - Automatically discover Grok Build sessions from `~/.grok/sessions` or `$GROK_HOME/sessions`, reading only bounded `summary.json` metadata.

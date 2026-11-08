@@ -26,6 +26,8 @@
     <string>14.0</string>
     <key>LSUIElement</key>
     <true/>
+    <key>RepriseSingleInstanceProtocol</key>
+    <integer>1</integer>
     <key>NSAppleEventsUsageDescription</key>
     <string>Reprise controls your chosen terminal app to open your project folder and resume the session you choose.</string>
     <key>NSHighResolutionCapable</key>

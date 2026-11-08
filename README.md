@@ -16,6 +16,8 @@ The app lets you review the detected assistant and command, add or detect the pr
 
 The library opens when Reprise starts. Select a session to see the full command, folder, and notes. Choose **Default terminal** in the library sidebar or menubar menu: Apple Terminal, Ghostty, or iTerm2. The choice is saved and the Resume button shows the selected app. It opens a new window, changes to the project directory, and starts the appropriate CLI. Choose a new folder if the project has moved. The installed CLI must be available in your shell and signed in.
 
+Reprise keeps one running instance per macOS user, including when you open a second app copy from a build folder or disk image. Opening it again brings the existing library forward. Quit older releases before replacing the app during an update.
+
 The library shows one row per project directory, with sessions from different assistants together. Selecting a project chooses its latest session; use its history to resume an earlier conversation. Project names alone are never used for grouping, so two folders with the same name stay separate.
 
 ### Desktop app versus CLI
