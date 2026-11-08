@@ -22,6 +22,7 @@ internal static class UiSmoke
                 window.Show();
                 for (var i = 0; i < 10; i++) { Application.DoEvents(); Thread.Sleep(25); }
                 File.WriteAllText(Path.Combine(output, "layout.txt"), window.LayoutReport());
+                window.ValidateHorizontalLayout();
                 using var image = new Bitmap(window.Width, window.Height); window.DrawToBitmap(image, new Rectangle(Point.Empty, window.Size));
                 image.Save(Path.Combine(output, "windows-library.png"), ImageFormat.Png);
                 window.Hide();

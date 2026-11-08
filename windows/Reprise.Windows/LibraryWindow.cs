@@ -262,6 +262,25 @@ internal sealed class LibraryWindow : Form
     private void Act(Action action) { try { action(); ShowStorageError(); } catch (Exception error) { MessageBox.Show(this, error.Message, "Reprise", MessageBoxButtons.OK, MessageBoxIcon.Error); } }
     internal void ShowLibrary() { Show(); WindowState = FormWindowState.Normal; Activate(); }
     internal string LayoutReport() => $"Window: {Size}; client: {ClientSize}; root: {Controls[0].Bounds}; heading: {title.Bounds}; directory: {path.Bounds}; history: {history.Bounds}; detail: {history.Parent?.Bounds}; detail client: {history.Parent?.ClientSize}";
+    internal void ValidateHorizontalLayout()
+    {
+        var client = RectangleToScreen(ClientRectangle);
+        void Inspect(Control parent)
+        {
+            foreach (Control control in parent.Controls)
+            {
+                if (!control.Visible) continue;
+                if (control is Button or TextBox or ComboBox or Label or DataGridView)
+                {
+                    var bounds = control.RectangleToScreen(control.ClientRectangle);
+                    if (bounds.Left < client.Left || bounds.Right > client.Right)
+                        throw new InvalidOperationException($"Control extends outside the window: {control.GetType().Name} {control.Text} {bounds}; window {client}");
+                }
+                if (control is not DataGridView) Inspect(control);
+            }
+        }
+        Inspect(this);
+    }
     private void Quit() { exiting = true; store.Save(); timer.Stop(); tray.Visible = false; Close(); }
     protected override void WndProc(ref Message message) { if ((uint)message.Msg == Program.ShowLibraryMessage) ShowLibrary(); base.WndProc(ref message); }
     protected override void OnFormClosing(FormClosingEventArgs e)
