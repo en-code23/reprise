@@ -28,7 +28,7 @@ internal sealed class LibraryWindow : Form
     {
         this.store = store;
         Text = "Reprise"; Font = new Font("Segoe UI", 10); BackColor = Theme.Paper; ForeColor = Theme.Ink;
-        Icon = NativeServices.LoadIcon(); MinimumSize = new Size(1100, 740); Size = new Size(1280, 880); StartPosition = FormStartPosition.CenterScreen;
+        Icon = NativeServices.LoadIcon(); MinimumSize = new Size(1000, 720); Size = new Size(1180, 820); StartPosition = FormStartPosition.CenterScreen;
         AutoScaleMode = AutoScaleMode.Dpi;
         resume = Theme.Button("Resume", (_, _) => Act(() => NativeServices.Resume(CurrentSession!, store.Preferences.Terminal)), true);
         editor = Theme.Button("Open in editor", (_, _) => Act(() => { NativeServices.OpenEditor(CurrentSession!, store.Preferences.EditorPath ?? NativeServices.DefaultEditor()); message.Text = "Project opened. Resume command copied."; }));
@@ -64,10 +64,10 @@ internal sealed class LibraryWindow : Form
 
     private void BuildLayout()
     {
-        var root = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, Margin = new Padding(0), Padding = new Padding(0) };
-        root.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 210)); root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); Controls.Add(root);
+        var root = new SplitContainer { Size = new Size(1180, 820), SplitterDistance = 210, SplitterWidth = 1, IsSplitterFixed = true, FixedPanel = FixedPanel.Panel1, Panel1MinSize = 210, Panel2MinSize = 700, Dock = DockStyle.Fill };
+        Controls.Add(root);
         var sidebar = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1, Padding = new Padding(16), Margin = new Padding(0), BackColor = Theme.Paper };
-        sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 70)); sidebar.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); sidebar.RowStyles.Add(new RowStyle(SizeType.AutoSize)); root.Controls.Add(sidebar, 0, 0);
+        sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 70)); sidebar.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); sidebar.RowStyles.Add(new RowStyle(SizeType.AutoSize)); root.Panel1.Controls.Add(sidebar);
         var brand = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Padding = new Padding(0, 10, 0, 0) };
         brand.Controls.Add(new PictureBox { Image = Icon!.ToBitmap(), SizeMode = PictureBoxSizeMode.Zoom, Size = new Size(34, 34), Margin = new Padding(0, 0, 10, 0) }); brand.Controls.Add(Theme.Label("Reprise", 18, true)); sidebar.Controls.Add(brand, 0, 0);
         var navigation = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Margin = new Padding(0) };
@@ -97,7 +97,7 @@ internal sealed class LibraryWindow : Form
             menu.Items.Add("Quit Reprise", null, (_, _) => Quit()); menu.Show(Cursor.Position);
         }); options.Width = 170; options.AutoSize = false; settings.Controls.Add(options); sidebar.Controls.Add(settings, 0, 2);
         var main = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1, Margin = new Padding(0), BackColor = Color.White };
-        main.RowStyles.Add(new RowStyle(SizeType.Absolute, 78)); main.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); main.RowStyles.Add(new RowStyle(SizeType.Absolute, 44)); root.Controls.Add(main, 1, 0);
+        main.RowStyles.Add(new RowStyle(SizeType.Absolute, 78)); main.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); main.RowStyles.Add(new RowStyle(SizeType.Absolute, 44)); root.Panel2.Controls.Add(main);
         var toolbar = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, Padding = new Padding(18), Margin = new Padding(0) };
         toolbar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); toolbar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170)); toolbar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
         search.Margin = new Padding(0, 6, 14, 0); search.TextChanged += (_, _) => RefreshProjects(); toolbar.Controls.Add(search, 0, 0);

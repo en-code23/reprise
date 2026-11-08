@@ -28,7 +28,8 @@ internal static class Program
         if (!primary) { PostMessage((nint)0xffff, ShowLibraryMessage, 0, 0); return; }
         try
         {
-            var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Reprise");
+            // Keep user data outside Velopack's per-user Reprise install folder.
+            var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RepriseLibrary");
             var store = new SessionStore(directory);
             Application.Run(new LibraryWindow(store));
         }

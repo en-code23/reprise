@@ -1,4 +1,4 @@
-param([string]$Version = "1.6.0")
+param([string]$Version = "1.6.0", [switch]$TestInstaller)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $publish = Join-Path $root 'build/windows/publish'
@@ -8,6 +8,7 @@ $tools = Join-Path $root 'build/windows/tools'
 $models = Join-Path $root 'windows/Reprise.Windows/tessdata'
 if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw 'Use a numeric major.minor.patch version.' }
 if (-not $IsWindows) { throw 'The Windows installer must be packaged on Windows.' }
+if ($TestInstaller -and $env:CI -ne 'true') { throw 'Installer testing is restricted to clean CI runners.' }
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 New-Item -ItemType Directory -Force -Path $models, $publish, $qa, $output, $tools | Out-Null
 
@@ -50,4 +51,21 @@ if ($LASTEXITCODE -ne 0 -and -not (Test-Path "$tools/vpk.exe")) { throw 'Could n
 & "$tools/vpk.exe" pack --packId Reprise --packVersion $Version --packDir $publish --mainExe Reprise.exe --icon "$root/windows/Reprise.Windows/Assets/Reprise.ico" --packTitle Reprise --packAuthors en-code23 --outputDir $output
 if ($LASTEXITCODE -ne 0) { throw 'Windows installer packaging failed.' }
 if (-not (Get-ChildItem $output -Filter '*Setup.exe')) { throw 'The Windows installer EXE was not generated.' }
+if ($TestInstaller) {
+    $setup = Get-ChildItem $output -Filter '*Setup.exe' | Select-Object -First 1
+    $install = Start-Process $setup.FullName -ArgumentList '--silent' -PassThru
+    if (-not $install.WaitForExit(120000)) { $install.Kill(); throw 'Installer test timed out.' }
+    if ($install.ExitCode -ne 0) { throw "Installer exited with code $($install.ExitCode)." }
+    $installedExe = Join-Path $env:LOCALAPPDATA 'Reprise/current/Reprise.exe'
+    if (-not (Test-Path $installedExe)) { throw 'The installer did not create the installed app.' }
+    $installedQa = Join-Path $qa 'installed'
+    $check = Start-Process $installedExe -ArgumentList @('--smoke-test', "`"$installedQa`"") -PassThru
+    if (-not $check.WaitForExit(120000)) { $check.Kill(); throw 'Installed app test timed out.' }
+    if ($check.ExitCode -ne 0 -or -not (Test-Path "$installedQa/smoke-result.txt")) {
+        if (Test-Path "$installedQa/error.txt") { Get-Content "$installedQa/error.txt" | Write-Host }
+        throw 'The installed app failed its UI/OCR test.'
+    }
+    Get-Process Reprise -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $installedExe } | Stop-Process -Force
+    Write-Host 'Installed EXE launched and passed UI/OCR tests.'
+}
 Write-Host "Windows installer and update packages are ready in $output"

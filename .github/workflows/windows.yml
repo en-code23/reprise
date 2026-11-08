@@ -18,7 +18,7 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Build, test, render, and package
         shell: pwsh
-        run: ./scripts/build-windows.ps1 -Version 1.6.0
+        run: ./scripts/build-windows.ps1 -Version 1.6.0 -TestInstaller
       - name: Upload Windows installer and previews
         if: always()
         uses: actions/upload-artifact@v4
