@@ -41,6 +41,8 @@ internal static class NativeServices
     {
         var directory = RequireDirectory(session);
         var arguments = Commands.ValidatedArguments(session.Command);
+        var executable = FindExecutable(arguments[0] + ".exe") ?? FindExecutable(arguments[0] + ".cmd")
+            ?? throw new InvalidOperationException($"{arguments[0]} was not found on your Windows PATH. Install and sign in to its Windows CLI first.");
         ProcessStartInfo info;
         if (terminal == "Command Prompt")
         {
@@ -50,7 +52,7 @@ internal static class NativeServices
         else
         {
             var shell = FindExecutable("pwsh.exe") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe");
-            var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(Commands.PowerShellScript(session)));
+            var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(Commands.PowerShellScript(session, executable)));
             if (terminal == "Windows Terminal")
             {
                 info = new(FindExecutable("wt.exe") ?? throw new InvalidOperationException("Windows Terminal was not found. Install it or choose PowerShell in the sidebar."));
@@ -63,6 +65,7 @@ internal static class NativeServices
             }
         }
         info.WorkingDirectory = directory; info.UseShellExecute = false;
+        info.Environment["NoDefaultCurrentDirectoryInExePath"] = "1";
         Process.Start(info)?.Dispose();
     }
     internal static void OpenEditor(Session session, string? editor)

@@ -56,12 +56,12 @@ public static class Commands
         return parts;
     }
     public static string PowerShellLiteral(string value) => "'" + value.Replace("'", "''") + "'";
-    public static string PowerShellScript(Session session)
+    public static string PowerShellScript(Session session, string? executable = null)
     {
         if (string.IsNullOrWhiteSpace(session.ProjectDirectory)) throw new InvalidOperationException("Choose a project folder first.");
         var arguments = ValidatedArguments(session.Command);
         return "$ErrorActionPreference = 'Stop'; Set-Location -LiteralPath " + PowerShellLiteral(session.ProjectDirectory) +
-            "; & " + string.Join(" ", arguments.Select(PowerShellLiteral));
+            "; & " + PowerShellLiteral(executable ?? arguments[0]) + " " + string.Join(" ", arguments.Skip(1).Select(PowerShellLiteral));
     }
 }
 

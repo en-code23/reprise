@@ -42,7 +42,8 @@ internal sealed class CaptureWindow : Form
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         var actions = new FlowLayoutPanel { FlowDirection = FlowDirection.RightToLeft, Dock = DockStyle.Fill, AutoSize = true, WrapContents = true };
         save = Theme.Button("Save session", (_, _) => SaveSession(), true);
-        actions.Controls.Add(save); actions.Controls.Add(Theme.Button("Cancel", (_, _) => { DialogResult = DialogResult.Cancel; Close(); }));
+        var cancel = Theme.Button("Cancel", (_, _) => { DialogResult = DialogResult.Cancel; Close(); });
+        actions.Controls.Add(save); actions.Controls.Add(cancel); CancelButton = cancel;
         layout.Controls.Add(actions, 0, 8); layout.SetColumnSpan(actions, 2);
         project.Text = original.Project; directory.Text = original.ProjectDirectory ?? ""; command.Text = original.Command; note.Text = original.Note;
         model.SelectedItem = original.Model; source.SelectedItem = original.OriginOverride ?? "Automatic";

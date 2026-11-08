@@ -1,4 +1,6 @@
 using System.Drawing.Imaging;
+using System.Diagnostics;
+using System.Text;
 using Reprise.Core;
 
 namespace Reprise.Windows;
@@ -40,7 +42,16 @@ internal static class UiSmoke
             }
             var text = NativeServices.ReadScreenshot(screenshot).GetAwaiter().GetResult();
             if (!Commands.Parse(text).Command.StartsWith("codex resume ", StringComparison.Ordinal)) throw new InvalidOperationException("OCR did not recognize the test resume command: " + text);
-            File.WriteAllText(Path.Combine(output, "smoke-result.txt"), $"UI rendered; local OCR recognized the resume command; app version {NativeServices.Version}.");
+            var testFolder = Path.Combine(temporary, "Project's; folder"); Directory.CreateDirectory(testFolder);
+            var shim = Path.Combine(temporary, "codex.cmd");
+            File.WriteAllText(shim, "@echo off\r\necho %1 %2>\"%~dp0arguments.txt\"\r\ncd >\"%~dp0directory.txt\"\r\n");
+            var testSession = new Session { ProjectDirectory = testFolder, Command = "codex resume 8d4b841b-1552-4b11-9a32-33b9205b836a" };
+            var shell = new ProcessStartInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe")) { UseShellExecute = false, CreateNoWindow = true };
+            foreach (var argument in new[] { "-NoProfile", "-NonInteractive", "-EncodedCommand", Convert.ToBase64String(Encoding.Unicode.GetBytes(Commands.PowerShellScript(testSession, shim))) }) shell.ArgumentList.Add(argument);
+            using var process = Process.Start(shell)!;
+            if (!process.WaitForExit(30000) || process.ExitCode != 0) throw new InvalidOperationException("PowerShell command test failed.");
+            if (File.ReadAllText(Path.Combine(temporary, "directory.txt")).Trim() != testFolder || File.ReadAllText(Path.Combine(temporary, "arguments.txt")).Trim() != "resume 8d4b841b-1552-4b11-9a32-33b9205b836a") throw new InvalidOperationException("Project directory or command arguments were changed by shell parsing.");
+            File.WriteAllText(Path.Combine(output, "smoke-result.txt"), $"UI rendered; local OCR recognized the resume command; PowerShell preserved the folder and arguments; app version {NativeServices.Version}.");
         }
         finally { if (Directory.Exists(temporary)) Directory.Delete(temporary, true); }
     }

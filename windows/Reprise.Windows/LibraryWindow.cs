@@ -31,7 +31,7 @@ internal sealed class LibraryWindow : Form
         Icon = NativeServices.LoadIcon(); MinimumSize = new Size(1000, 720); Size = new Size(1180, 820); StartPosition = FormStartPosition.CenterScreen;
         AutoScaleMode = AutoScaleMode.Dpi;
         resume = Theme.Button("Resume", (_, _) => Act(() => NativeServices.Resume(CurrentSession!, store.Preferences.Terminal)), true);
-        editor = Theme.Button("Open in editor", (_, _) => Act(() => { NativeServices.OpenEditor(CurrentSession!, store.Preferences.EditorPath ?? NativeServices.DefaultEditor()); message.Text = "Project opened. Resume command copied."; }));
+        editor = Theme.Button("Open in editor", (_, _) => OpenCurrentEditor());
         copy = Theme.Button("Copy command", (_, _) => Act(() => { Clipboard.SetText(CurrentSession!.Command); message.Text = "Resume command copied."; }));
         edit = Theme.Button("Edit details", (_, _) => ShowCapture(CurrentSession));
         remove = Theme.Button("Remove session", (_, _) =>
@@ -67,6 +67,7 @@ internal sealed class LibraryWindow : Form
         var root = new SplitContainer { Size = new Size(1180, 820), SplitterDistance = 210, SplitterWidth = 1, IsSplitterFixed = true, FixedPanel = FixedPanel.Panel1, Panel1MinSize = 210, Panel2MinSize = 700, Dock = DockStyle.Fill };
         Controls.Add(root);
         var sidebar = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1, Padding = new Padding(16), Margin = new Padding(0), BackColor = Theme.Paper };
+        sidebar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 70)); sidebar.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); sidebar.RowStyles.Add(new RowStyle(SizeType.AutoSize)); root.Panel1.Controls.Add(sidebar);
         var brand = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Padding = new Padding(0, 10, 0, 0) };
         brand.Controls.Add(new PictureBox { Image = Icon!.ToBitmap(), SizeMode = PictureBoxSizeMode.Zoom, Size = new Size(34, 34), Margin = new Padding(0, 0, 10, 0) }); brand.Controls.Add(Theme.Label("Reprise", 18, true)); sidebar.Controls.Add(brand, 0, 0);
@@ -97,6 +98,7 @@ internal sealed class LibraryWindow : Form
             menu.Items.Add("Quit Reprise", null, (_, _) => Quit()); menu.Show(Cursor.Position);
         }); options.Width = 170; options.AutoSize = false; settings.Controls.Add(options); sidebar.Controls.Add(settings, 0, 2);
         var main = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1, Margin = new Padding(0), BackColor = Color.White };
+        main.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         main.RowStyles.Add(new RowStyle(SizeType.Absolute, 78)); main.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); main.RowStyles.Add(new RowStyle(SizeType.Absolute, 44)); root.Panel2.Controls.Add(main);
         var toolbar = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, Padding = new Padding(18), Margin = new Padding(0) };
         toolbar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); toolbar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170)); toolbar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
@@ -125,7 +127,11 @@ internal sealed class LibraryWindow : Form
         detail.SizeChanged += (_, _) =>
         {
             var width = Math.Max(300, detail.ClientSize.Width - 66);
-            foreach (Control control in detail.Controls) { control.Width = width; if (control is Label { AutoSize: true } label) label.MaximumSize = new Size(width, 0); }
+            foreach (Control control in detail.Controls)
+            {
+                if (control.AutoSize) control.MaximumSize = new Size(width, 0);
+                control.Width = width;
+            }
         };
         split.Panel2.Controls.Add(detail);
         message.Dock = DockStyle.Fill; message.AutoSize = false; message.Padding = new Padding(18, 9, 12, 0); message.ForeColor = Theme.Secondary; main.Controls.Add(message, 0, 2);
@@ -178,7 +184,8 @@ internal sealed class LibraryWindow : Form
         path.Text = CurrentProject?.Directory ?? "Add a screenshot, enter a command, or sync local Codex, Claude, and Grok sessions.";
         command.Text = session?.Command ?? ""; note.Text = session?.Note ?? ""; origin.Text = session == null ? "" : $"Source: {session.Origin} · {(session.DetectedAutomatically ? "Automatically saved" : "Screenshot / manual")}";
         resume.Text = "Resume in " + terminal.Text;
-        editor.Text = "Open in " + NativeServices.EditorName(store.Preferences.EditorPath ?? NativeServices.DefaultEditor());
+        var selectedEditor = store.Preferences.EditorPath ?? NativeServices.DefaultEditor();
+        editor.Text = selectedEditor == null ? "Choose editor…" : "Open in " + NativeServices.EditorName(selectedEditor);
     }
     private void ShowCapture(Session? editing = null, string? image = null)
     {
@@ -204,6 +211,22 @@ internal sealed class LibraryWindow : Form
         }); return menu;
     }
     private void SelectEditor(string path) => Act(() => { store.Preferences.EditorPath = path; store.SavePreferences(); chooseEditor.Text = NativeServices.EditorName(path); ShowSession(); });
+    private void OpenCurrentEditor()
+    {
+        if (CurrentSession is not { } session) return;
+        Act(() =>
+        {
+            NativeServices.RequireDirectory(session);
+            var selected = store.Preferences.EditorPath ?? NativeServices.DefaultEditor();
+            if (selected == null || !File.Exists(selected))
+            {
+                using var picker = new OpenFileDialog { Filter = "Editor applications (*.exe)|*.exe", Title = "Choose your code editor" };
+                if (picker.ShowDialog(this) != DialogResult.OK) return;
+                selected = picker.FileName; SelectEditor(selected);
+            }
+            NativeServices.OpenEditor(session, selected); message.Text = "Project opened. Resume command copied.";
+        });
+    }
     private async Task Sync()
     {
         if (syncing || IsDisposed) return;

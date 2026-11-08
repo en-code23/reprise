@@ -43,6 +43,21 @@ try
     Check(File.ReadAllText(file) == "broken library" && broken.StorageError != null, "Unreadable library was overwritten");
     var preferences = Path.Combine(temporary, "preferences.json"); File.WriteAllText(preferences, "broken preferences");
     new SessionStore(temporary).SavePreferences(); Check(File.ReadAllText(preferences) == "broken preferences", "Unreadable preferences were overwritten");
+    var home = Path.Combine(temporary, "discovery");
+    var roots = new Dictionary<string, string?> { ["CODEX_HOME"] = Path.Combine(home, "codex"), ["CLAUDE_CONFIG_DIR"] = Path.Combine(home, "claude"), ["GROK_HOME"] = Path.Combine(home, "grok") };
+    Directory.CreateDirectory(Path.Combine(roots["CODEX_HOME"]!, "sessions", "subagents"));
+    Directory.CreateDirectory(Path.Combine(roots["CLAUDE_CONFIG_DIR"]!, "projects"));
+    Directory.CreateDirectory(Path.Combine(roots["GROK_HOME"]!, "sessions", "one"));
+    Directory.CreateDirectory(Path.Combine(roots["GROK_HOME"]!, "sessions", "oversize"));
+    File.WriteAllText(Path.Combine(roots["CODEX_HOME"]!, "sessions", "main.jsonl"), codex + "\n" + new string('x', 300_000));
+    File.WriteAllText(Path.Combine(roots["CODEX_HOME"]!, "sessions", "subagents", "child.jsonl"), codex);
+    File.WriteAllText(Path.Combine(roots["CLAUDE_CONFIG_DIR"]!, "projects", "main.jsonl"), claude);
+    File.WriteAllText(Path.Combine(roots["GROK_HOME"]!, "sessions", "one", "summary.json"), grok);
+    File.WriteAllText(Path.Combine(roots["GROK_HOME"]!, "sessions", "oversize", "summary.json"), new string('x', 1024 * 1024 + 1));
+    var scan = SessionDiscovery.Scan(home, roots);
+    Check(scan.Sessions.Count == 3, "Discovery must skip subagents and oversized metadata");
+    Check(scan.Sessions.All(s => s.Note.Length == 0), "Discovery must not retain conversation content");
+    Check(scan.Warnings.Count == 1, "Oversized summaries should be reported");
 }
 finally { if (Directory.Exists(temporary)) Directory.Delete(temporary, true); }
 Console.WriteLine($"Passed {passed} Windows core checks.");
