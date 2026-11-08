@@ -53,7 +53,7 @@ public sealed class SessionStore
     public void Save()
     {
         if (!canWrite) return;
-        try { AtomicWrite("sessions.json", JsonSerializer.Serialize(Sessions, Json)); StorageError = null; }
+        try { AtomicWrite("sessions.json", JsonSerializer.Serialize(Sessions, Json)); StorageError = canWritePreferences ? null : "Preferences could not be read. Defaults are being used; the original preferences will be preserved."; }
         catch { StorageError = "Your changes could not be saved. The previous library remains on disk."; }
     }
     public void SavePreferences() { if (canWritePreferences) AtomicWrite("preferences.json", JsonSerializer.Serialize(Preferences, Json)); }

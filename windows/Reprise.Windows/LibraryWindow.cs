@@ -109,7 +109,8 @@ internal sealed class LibraryWindow : Form
         count.Dock = DockStyle.Top; count.Height = 32; count.AutoSize = false; listPanel.Controls.Add(projects); listPanel.Controls.Add(count); split.Panel1.Controls.Add(listPanel);
         projects.BackColor = Color.White; projects.DrawItem += DrawProject; projects.SelectedIndexChanged += (_, _) => { if (!refreshing) BindProject(); };
         var detail = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Padding = new Padding(22), BackColor = Theme.Paper };
-        title.AutoSize = false; title.Height = 50; title.AutoEllipsis = true; path.AutoSize = false; path.Height = 44; path.AutoEllipsis = true; path.ForeColor = Theme.Secondary;
+        title.AutoSize = false; title.MaximumSize = Size.Empty; title.MinimumSize = new Size(0, 50); title.Height = 50; title.AutoEllipsis = true;
+        path.AutoSize = false; path.MaximumSize = Size.Empty; path.MinimumSize = new Size(0, 44); path.Height = 44; path.AutoEllipsis = true; path.ForeColor = Theme.Secondary;
         detail.Controls.Add(title); detail.Controls.Add(path);
         var actions = new FlowLayoutPanel { AutoSize = true, WrapContents = true, Margin = new Padding(0, 0, 0, 10) };
         actions.Controls.AddRange([resume, editor, copy, edit, remove]); detail.Controls.Add(actions);
@@ -124,7 +125,7 @@ internal sealed class LibraryWindow : Form
         detail.SizeChanged += (_, _) =>
         {
             var width = Math.Max(300, detail.ClientSize.Width - 66);
-            foreach (Control control in detail.Controls) { control.Width = width; if (control is Label label) label.MaximumSize = new Size(width, 0); }
+            foreach (Control control in detail.Controls) { control.Width = width; if (control is Label { AutoSize: true } label) label.MaximumSize = new Size(width, 0); }
         };
         split.Panel2.Controls.Add(detail);
         message.Dock = DockStyle.Fill; message.AutoSize = false; message.Padding = new Padding(18, 9, 12, 0); message.ForeColor = Theme.Secondary; main.Controls.Add(message, 0, 2);
@@ -237,6 +238,7 @@ internal sealed class LibraryWindow : Form
     private void ShowStorageError() { if (store.StorageError != null) message.Text = store.StorageError; }
     private void Act(Action action) { try { action(); ShowStorageError(); } catch (Exception error) { MessageBox.Show(this, error.Message, "Reprise", MessageBoxButtons.OK, MessageBoxIcon.Error); } }
     internal void ShowLibrary() { Show(); WindowState = FormWindowState.Normal; Activate(); }
+    internal string LayoutReport() => $"Window: {Size}; client: {ClientSize}; root: {Controls[0].Bounds}; heading: {title.Bounds}; directory: {path.Bounds}; history: {history.Bounds}; detail: {history.Parent?.Bounds}; detail client: {history.Parent?.ClientSize}";
     private void Quit() { exiting = true; store.Save(); timer.Stop(); tray.Visible = false; Close(); }
     protected override void WndProc(ref Message message) { if ((uint)message.Msg == Program.ShowLibraryMessage) ShowLibrary(); base.WndProc(ref message); }
     protected override void OnFormClosing(FormClosingEventArgs e)

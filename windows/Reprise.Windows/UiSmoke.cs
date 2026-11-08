@@ -17,7 +17,9 @@ internal static class UiSmoke
                     store.Upsert(new Session { Project = project, ProjectDirectory = folder, Model = model, Command = Commands.Build(model, Guid.NewGuid().ToString()), Note = "Continue the payment retry timeline. Tests are passing; next up is the failure state.", DetectedAutomatically = true, DetectedOrigin = model == "grok" ? "Unknown" : "CLI" });
             using (var window = new LibraryWindow(store, true))
             {
-                window.Show(); Application.DoEvents();
+                window.Show();
+                for (var i = 0; i < 10; i++) { Application.DoEvents(); Thread.Sleep(25); }
+                File.WriteAllText(Path.Combine(output, "layout.txt"), window.LayoutReport());
                 using var image = new Bitmap(window.Width, window.Height); window.DrawToBitmap(image, new Rectangle(Point.Empty, window.Size));
                 image.Save(Path.Combine(output, "windows-library.png"), ImageFormat.Png);
                 window.Hide();

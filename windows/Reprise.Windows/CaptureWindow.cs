@@ -14,7 +14,7 @@ internal sealed class CaptureWindow : Form
 
     internal CaptureWindow(Session? editing = null)
     {
-        original = editing ?? new Session();
+        original = editing is null ? new Session() : editing with { };
         Text = editing == null ? "Add session — Reprise" : "Session details — Reprise";
         Font = new Font("Segoe UI", 10); BackColor = Theme.Paper; ForeColor = Theme.Ink;
         Icon = NativeServices.LoadIcon(); StartPosition = FormStartPosition.CenterParent; MinimumSize = new Size(620, 650); Size = new Size(680, 730);
@@ -28,11 +28,11 @@ internal sealed class CaptureWindow : Form
         layout.Controls.Add(screenshot, 0, 0); layout.SetColumnSpan(screenshot, 2);
         status.Dock = DockStyle.Fill; layout.Controls.Add(status, 0, 1); layout.SetColumnSpan(status, 2);
         AddField(layout, 2, "Assistant", model); AddField(layout, 3, "Project", project);
-        var folder = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, AutoSize = true, Margin = new Padding(0) };
+        var folder = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, AutoSize = false, Margin = new Padding(0) };
         folder.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); folder.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 95));
         directory.Dock = DockStyle.Fill;
         var choose = Theme.Button("Choose…", (_, _) => { using var picker = new FolderBrowserDialog { Description = "Choose the project folder", UseDescriptionForTitle = true }; if (picker.ShowDialog(this) == DialogResult.OK) { directory.Text = picker.SelectedPath; if (string.IsNullOrWhiteSpace(project.Text)) project.Text = ProjectPaths.Name(picker.SelectedPath); } });
-        choose.MinimumSize = new Size(85, 32); choose.Margin = new Padding(8, 0, 0, 6); choose.Dock = DockStyle.Fill;
+        choose.AutoSize = false; choose.MinimumSize = new Size(85, 32); choose.Margin = new Padding(8, 0, 0, 6); choose.Dock = DockStyle.Fill;
         folder.Controls.Add(directory, 0, 0); folder.Controls.Add(choose, 1, 0); AddField(layout, 4, "Project folder", folder);
         command.Font = new Font("Consolas", 10); AddField(layout, 5, "Resume command", command);
         AddField(layout, 6, "Session source", source);

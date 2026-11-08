@@ -100,7 +100,7 @@ internal static class Theme
             BackColor = primary ? Green : Color.White, ForeColor = primary ? Color.White : Ink, Margin = new Padding(0, 0, 10, 8) };
         button.FlatAppearance.BorderColor = ColorTranslator.FromHtml("#dfe4da"); button.Click += action; return button;
     }
-    internal static Label Label(string text, float size = 10, bool bold = false) => new() { Text = text, AutoSize = true, MaximumSize = new Size(720, 0), Font = new Font("Segoe UI", size, bold ? FontStyle.Bold : FontStyle.Regular), ForeColor = Ink, Margin = new Padding(0, 0, 0, 8) };
+    internal static Label Label(string text, float size = 10, bool bold = false) => new() { Text = text, UseMnemonic = false, AutoSize = true, MaximumSize = new Size(720, 0), Font = new Font("Segoe UI", size, bold ? FontStyle.Bold : FontStyle.Regular), ForeColor = Ink, Margin = new Padding(0, 0, 0, 8) };
     internal static ComboBox Combo(IEnumerable<string> values)
     {
         var combo = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 170, IntegralHeight = false, DropDownHeight = 260, Margin = new Padding(0, 0, 0, 10) };
