@@ -14,8 +14,8 @@ internal sealed class LibraryWindow : Form
     private readonly ComboBox terminal = Theme.Combo(NativeServices.Terminals);
     private readonly TextBox search = new() { PlaceholderText = "Search projects, sessions, or notes", Dock = DockStyle.Fill };
     private readonly Label title = Theme.Label("Your next session belongs here", 22, true), path = Theme.Label("Add a screenshot, enter a command, or sync local sessions."), message = Theme.Label("Saved on this PC", 9);
-    private readonly TextBox command = new() { ReadOnly = true, Multiline = true, WordWrap = true, Height = 65, Font = new Font("Consolas", 10), BorderStyle = BorderStyle.FixedSingle };
-    private readonly TextBox note = new() { ReadOnly = true, Multiline = true, ScrollBars = ScrollBars.Vertical, Height = 110, BorderStyle = BorderStyle.FixedSingle };
+    private readonly TextBox command = new() { AutoSize = false, ReadOnly = true, Multiline = true, WordWrap = true, MinimumSize = new Size(0, 65), Height = 65, Font = new Font("Consolas", 10), BorderStyle = BorderStyle.FixedSingle };
+    private readonly TextBox note = new() { AutoSize = false, ReadOnly = true, Multiline = true, ScrollBars = ScrollBars.Vertical, MinimumSize = new Size(0, 110), Height = 110, BorderStyle = BorderStyle.FixedSingle };
     private readonly Label origin = Theme.Label("", 9), count = Theme.Label("Projects", 11, true);
     private readonly Button resume, editor, copy, edit, remove, sync, update, chooseEditor;
     private readonly List<Button> areaButtons = [];
@@ -75,7 +75,7 @@ internal sealed class LibraryWindow : Form
         navigation.Controls.Add(Theme.Label("LIBRARY", 9, true));
         foreach (var item in new[] { "Projects", "Unassigned", "Internal" })
         {
-            var button = Theme.Button(item, (_, _) => { area = item; RefreshProjects(); }); button.Width = 170; button.AutoSize = false; button.Tag = item;
+            var button = Theme.Button(item, (_, _) => { area = item; RefreshProjects(); }); button.Width = 170; button.AutoSize = false; button.Margin = new Padding(0, 0, 0, 8); button.Tag = item;
             areaButtons.Add(button); navigation.Controls.Add(button);
         }
         navigation.Controls.Add(Theme.Label("ASSISTANT", 9, true)); navigation.Controls.Add(model);
@@ -96,7 +96,9 @@ internal sealed class LibraryWindow : Form
             menu.Items.Add("Restore removed sessions", null, async (_, _) => { Act(store.RestoreRemoved); await Sync(); });
             menu.Items.Add("Open data folder", null, (_, _) => NativeServices.OpenUrl(store.DataDirectory));
             menu.Items.Add("Quit Reprise", null, (_, _) => Quit()); menu.Show(Cursor.Position);
-        }); options.Width = 170; options.AutoSize = false; settings.Controls.Add(options); sidebar.Controls.Add(settings, 0, 2);
+        }); options.Width = 170; options.AutoSize = false; settings.Controls.Add(options);
+        foreach (var button in settings.Controls.OfType<Button>()) button.Margin = new Padding(0, 0, 0, 8);
+        sidebar.Controls.Add(settings, 0, 2);
         var main = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1, Margin = new Padding(0), BackColor = Color.White };
         main.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         main.RowStyles.Add(new RowStyle(SizeType.Absolute, 78)); main.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); main.RowStyles.Add(new RowStyle(SizeType.Absolute, 44)); root.Panel2.Controls.Add(main);
@@ -129,7 +131,7 @@ internal sealed class LibraryWindow : Form
             var width = Math.Max(300, detail.ClientSize.Width - 66);
             foreach (Control control in detail.Controls)
             {
-                if (control.AutoSize) control.MaximumSize = new Size(width, 0);
+                if (control is Label { AutoSize: true } or FlowLayoutPanel { AutoSize: true }) control.MaximumSize = new Size(width, 0);
                 control.Width = width;
             }
         };
@@ -264,6 +266,7 @@ internal sealed class LibraryWindow : Form
     internal string LayoutReport() => $"Window: {Size}; client: {ClientSize}; root: {Controls[0].Bounds}; heading: {title.Bounds}; directory: {path.Bounds}; history: {history.Bounds}; detail: {history.Parent?.Bounds}; detail client: {history.Parent?.ClientSize}";
     internal void ValidateHorizontalLayout()
     {
+        if (command.Height < 50 || note.Height < 80) throw new InvalidOperationException("Session fields collapsed during layout.");
         var client = RectangleToScreen(ClientRectangle);
         void Inspect(Control parent)
         {
