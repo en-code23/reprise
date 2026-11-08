@@ -165,7 +165,7 @@ enum CommandParser {
     }
 
     static func resumeCommand(model: AssistantModel, identifier: String) -> String {
-        "\(model.commandName) \(model == .claude ? "--resume" : "resume") \(identifier)"
+        "\(model.commandName) \(model == .codex || model == .other ? "resume" : "--resume") \(identifier)"
     }
 
     static func detectProjectDirectory(in text: String) -> String? {

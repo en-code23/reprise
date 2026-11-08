@@ -1,5 +1,13 @@
 # Release notes
 
+## 1.4.0
+
+- Automatically discover Grok Build sessions from `~/.grok/sessions` or `$GROK_HOME/sessions`, reading only bounded `summary.json` metadata.
+- Import authoritative session IDs, project folders, and saved activity times without reading transcripts or retaining generated conversation summaries.
+- Include Grok sessions in grouped projects, assistant filters, session history, copy actions, and Terminal/Ghostty/iTerm2 resumption.
+- Use the installed Grok Build syntax `grok --resume ID`, migrating older saved Grok commands on load.
+- Keep Grok client source Unknown because its shared metadata format does not distinguish TUI, headless, and ACP. Manual source overrides remain supported.
+
 ## 1.3.0
 
 - Distinguish recorded session sources: Desktop app, CLI, IDE extension, SDK / automation, Multiple clients, and Unknown. Codex uses specific originator metadata; Claude uses transcript entrypoints.

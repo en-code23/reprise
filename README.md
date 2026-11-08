@@ -1,13 +1,13 @@
 # Reprise
 
-Reprise is a native macOS menubar app that automatically collects local Codex and Claude sessions, and turns terminal screenshots into an organized library of AI coding-session resume commands.
+Reprise is a native macOS menubar app that automatically collects local Codex, Claude, and Grok Build sessions, and turns terminal screenshots into an organized library of AI coding-session resume commands.
 
 Drop a screenshot on the Reprise status icon. Apple Vision OCR detects commands such as:
 
 ```sh
 codex resume session-id
 claude --resume session-id
-grok resume session-id
+grok --resume session-id
 ```
 
 The app lets you review the detected assistant and command, add or detect the project directory, attach a project name and note, then copy the command later from a grouped local library. Screenshots are processed on-device and are never uploaded.
@@ -28,19 +28,21 @@ Records without enough evidence stay Unknown. Use **Session details → Session 
 
 These are recorded origins for **local coding sessions**, not a live connection indicator. Regular cloud-only Claude chats are not discovered. The source label does not change how Resume works: it still uses your chosen terminal and the saved resume command.
 
-Older screenshot/manual entries without a folder are preserved under **Unassigned**. Assign a directory to move them into Projects. Sessions inside `.codex`, `.claude`, or `.chatgpt` directories are available under **Internal**, apart from regular projects. No conversations or captures are deleted by this organisation change.
+Older screenshot/manual entries without a folder are preserved under **Unassigned**. Assign a directory to move them into Projects. Sessions inside `.codex`, `.claude`, `.chatgpt`, or `.grok` directories are available under **Internal**, apart from regular projects. No conversations or captures are deleted by this organisation change.
 
 macOS may ask to allow Reprise to control your selected terminal on first use. Permission can be managed in System Settings → Privacy & Security → Automation. Ghostty requires version 1.3 or newer with AppleScript enabled (`macos-applescript = true`, the default). Reprise uses Ghostty's native window configuration with a project directory and initial command input, preserving your configured shell. See [Ghostty's scripting documentation](https://ghostty.org/docs/features/applescript). Reprise validates commands and quotes directory paths before launching; arbitrary shell scripts are not supported. Custom commands remain copyable.
 
 ## Automatic local discovery
 
-While Reprise is running, it scans `~/.codex/sessions` and `~/.claude/projects` at startup and every 30 seconds. `CODEX_HOME` and `CLAUDE_CONFIG_DIR` are respected when present in the app's environment. Use **Sync now** for an immediate refresh, or turn off **Auto-save local sessions** at the bottom of the library.
+While Reprise is running, it scans `~/.codex/sessions`, `~/.claude/projects`, and `~/.grok/sessions` at startup and every 30 seconds. `CODEX_HOME`, `CLAUDE_CONFIG_DIR`, and `GROK_HOME` are respected when present in the app's environment. Use **Sync now** for an immediate refresh, or turn off **Auto-save local sessions** at the bottom of the library.
 
-Only session ID, assistant, project directory, file modification time, and source metadata are retained. Conversation messages and tool output are not imported. Reading is limited to the first 256 KB of each transcript. Unsupported or incomplete files are skipped and may be found on a later scan. Subagent folders are excluded.
+Only session ID, assistant, project directory, activity time, and source metadata are retained. Conversation messages and tool output are not imported. Reading is limited to the first 256 KB of Codex/Claude transcripts. For Grok Build, only `summary.json` is read, with a 1 MB limit; its `info.id` and `info.cwd` fields are authoritative, and its saved activity timestamps take precedence over the file modification time. Grok transcripts, prompts, generated titles, and conversation summaries are not imported. Unsupported or incomplete files are skipped and may be found on a later scan. Nested subagent folders and symbolic-link summaries are excluded.
+
+Grok Build's summary format is shared by TUI, headless, and ACP clients and does not reliably identify the originating client. Imported Grok sources therefore stay Unknown unless set manually. This integration supports the installed Grok Build format, not arbitrary third-party Grok clients or cloud chat histories. See [Grok Build's session format](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-pager/docs/user-guide/17-sessions.md).
 
 Repeated scans do not duplicate sessions or replace your edited project name, directory, or notes. Removing a session from Reprise leaves the original CLI conversation intact and suppresses automatic re-import. Local storage lives in `~/Library/Application Support/Reprise/sessions.json`.
 
-Claude's installed CLI requires `--resume`, while Codex uses the `resume` subcommand. Older saved commands are updated accordingly when loaded.
+Claude and Grok Build require `--resume`, while Codex uses the `resume` subcommand. Older saved commands are updated accordingly when loaded.
 
 ## Requirements
 

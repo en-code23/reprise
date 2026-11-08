@@ -7,7 +7,7 @@
     <title>Reprise — Every project. One place to resume.</title>
     <meta
       name="description"
-      content="A native Mac app that organises Codex and Claude sessions by project. Find your folder, choose a session, and resume in Terminal."
+      content="A native Mac app that organises Codex, Claude, and Grok sessions by project. Find your folder, choose a session, and resume in your terminal."
     />
     <meta
       property="og:title"
@@ -128,8 +128,9 @@
           <span class="number">01 / COLLECT</span>
           <h2>It remembers<br />the sessions.</h2>
           <p>
-            Local Codex and Claude sessions appear automatically while Reprise
-            runs. Add a screenshot or paste a command for anything else.
+            Local Codex, Claude, and Grok Build sessions appear automatically
+            while Reprise runs. Add a screenshot or paste a command for anything
+            else.
           </p>
         </article>
         <article>
@@ -184,6 +185,17 @@
               ambiguous records stay Unknown; you can correct them in Session
               details. Regular cloud-only Claude chats are not imported. Resume
               still uses your chosen terminal.
+            </p>
+          </details>
+          <details>
+            <summary>Does it automatically save Grok sessions?</summary>
+            <p>
+              Yes. Reprise reads local Grok Build session metadata under
+              ~/.grok/sessions (or GROK_HOME), groups it by project, and resumes
+              it with grok --resume ID in your selected terminal. Grok's shared
+              metadata format does not reliably identify the app or CLI source,
+              so the source stays Unknown unless you set it manually. Cloud
+              chats and other Grok client formats are not imported.
             </p>
           </details>
           <details>

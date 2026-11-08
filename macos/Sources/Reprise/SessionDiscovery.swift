@@ -44,6 +44,11 @@ enum SessionDiscovery {
                 }
             }
         }
+        let grokHome = environment["GROK_HOME"].map { URL(fileURLWithPath: $0) }
+            ?? home.appendingPathComponent(".grok")
+        let grok = GrokSessionDiscovery.scan(root: grokHome.appendingPathComponent("sessions"))
+        result.sessions.append(contentsOf: grok.sessions)
+        result.warnings.append(contentsOf: grok.warnings)
         result.warnings = Array(Set(result.warnings)).sorted()
         return result
     }

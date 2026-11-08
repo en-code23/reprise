@@ -44,7 +44,7 @@ enum ProjectLibrary {
     static func area(for directory: String?) -> LibraryArea {
         guard let directory = normalizedDirectory(directory) else { return .unassigned }
         let components = URL(fileURLWithPath: directory).pathComponents
-        return components.contains(where: { [".codex", ".claude", ".chatgpt"].contains($0) }) ? .internalSessions : .projects
+        return components.contains(where: { [".codex", ".claude", ".chatgpt", ".grok"].contains($0) }) ? .internalSessions : .projects
     }
 
     static func groups(_ sessions: [ResumeSession], model: AssistantModel? = nil, query: String = "", origin: SessionOrigin? = nil) -> [ProjectGroup] {
