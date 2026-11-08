@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Reprise</AssemblyName>
+    <RootNamespace>Reprise.Windows</RootNamespace>
+    <Version>1.6.0</Version>
+    <ApplicationIcon>Assets/Reprise.ico</ApplicationIcon>
+    <PublishTrimmed>false</PublishTrimmed>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Reprise.Core/Reprise.Core.csproj" />
+    <PackageReference Include="Velopack" Version="1.2.161" />
+    <PackageReference Include="Tesseract" Version="5.2.0" />
+    <EmbeddedResource Include="Assets/Reprise.ico" LogicalName="Reprise.Icon" />
+    <Content Include="tessdata/**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Assets/ThirdPartyNotices.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

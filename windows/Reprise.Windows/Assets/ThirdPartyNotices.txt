@@ -1,0 +1,11 @@
+Reprise for Windows uses the following open-source components:
+
+Velopack (MIT): https://github.com/velopack/velopack
+Copyright (c) Velopack contributors. The MIT license is available with its source.
+
+Tesseract .NET wrapper (Apache-2.0): https://github.com/charlesw/tesseract
+Tesseract OCR and English language data (Apache-2.0): https://github.com/tesseract-ocr/tesseract
+Leptonica (BSD-2-Clause): https://github.com/DanBloomberg/leptonica
+
+Complete license texts are included in the installed licenses directory by the release build.
+No screenshots or conversation contents are uploaded by Reprise.

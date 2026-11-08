@@ -3,6 +3,9 @@
 macos/.build/
 build/
 dist/
+windows/**/bin/
+windows/**/obj/
+windows/Reprise.Windows/tessdata/
 node_modules/
 *.tsbuildinfo
 vite.config.js

@@ -1,0 +1,29 @@
+name: Test Windows App
+on:
+  push:
+    branches: [main, windows-native]
+    paths: ["windows/**", "scripts/build-windows.ps1", ".github/workflows/windows.yml"]
+  pull_request:
+    paths: ["windows/**", "scripts/build-windows.ps1", ".github/workflows/windows.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build, test, render, and package
+        shell: pwsh
+        run: ./scripts/build-windows.ps1 -Version 1.6.0
+      - name: Upload Windows installer and previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-validation
+          path: |
+            dist/windows/*
+            build/windows/qa/*
