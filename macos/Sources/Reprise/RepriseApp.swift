@@ -31,8 +31,9 @@ struct RepriseApp {
             ("", "", ""),
             ("Quit Reprise", "terminate:", "q")
         ])
+        _ = addMenu("File", items: [("Close Window", "performClose:", "w")])
         let edit = addMenu("Edit", items: [
-            ("Undo", "undo:", "z"), ("Redo", "redo:", "Z"),
+            ("Undo", "undo:", "z"), ("Redo", "redo:", "z"),
             ("", "", ""),
             ("Cut", "cut:", "x"), ("Copy", "copy:", "c"),
             ("Paste", "paste:", "v"), ("Select All", "selectAll:", "a")
