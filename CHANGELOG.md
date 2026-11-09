@@ -1,5 +1,11 @@
 # Release notes
 
+## 1.6.1
+
+- Show the Mac app in the Dock and app switcher as well as the menu bar. Clicking its Dock icon opens the library and restores a minimized library window.
+- Keep Reprise and automatic session discovery running when the library window closes; quit through the app or menu bar menu.
+- Remove the empty Settings window from startup and reopening. Keep standard Mac application, editing, and window menus.
+
 ## 1.6.0
 
 - Add a native Windows x64 system-tray app, a self-contained EXE installer, portable ZIP, and Velopack update packages alongside the existing Mac release.

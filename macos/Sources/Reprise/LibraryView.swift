@@ -20,6 +20,7 @@ final class LibraryWindowController: NSObject, NSWindowDelegate {
             self.window = window
         }
         NSApp.activate(ignoringOtherApps: true)
+        if window?.isMiniaturized == true { window?.deminiaturize(nil) }
         window?.makeKeyAndOrderFront(nil)
     }
 }

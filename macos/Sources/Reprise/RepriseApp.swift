@@ -1,14 +1,48 @@
 import AppKit
-import SwiftUI
 
 @main
-struct RepriseApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+struct RepriseApp {
+    @MainActor static func main() {
+        let app = NSApplication.shared
+        let delegate = AppDelegate()
+        app.delegate = delegate
+        app.mainMenu = makeMainMenu()
+        withExtendedLifetime(delegate) { app.run() }
+    }
 
-    var body: some Scene {
-        Settings {
-            EmptyView()
+    @MainActor private static func makeMainMenu() -> NSMenu {
+        let menu = NSMenu()
+        func addMenu(_ title: String, items: [(String, String, String)]) -> NSMenu {
+            let submenu = NSMenu(title: title)
+            let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+            item.submenu = submenu
+            menu.addItem(item)
+            for (title, action, key) in items {
+                if title.isEmpty { submenu.addItem(.separator()) }
+                else { submenu.addItem(withTitle: title, action: NSSelectorFromString(action), keyEquivalent: key) }
+            }
+            return submenu
         }
+        _ = addMenu("Reprise", items: [
+            ("About Reprise", "orderFrontStandardAboutPanel:", ""),
+            ("", "", ""),
+            ("Hide Reprise", "hide:", "h"),
+            ("Show All", "unhideAllApplications:", ""),
+            ("", "", ""),
+            ("Quit Reprise", "terminate:", "q")
+        ])
+        let edit = addMenu("Edit", items: [
+            ("Undo", "undo:", "z"), ("Redo", "redo:", "Z"),
+            ("", "", ""),
+            ("Cut", "cut:", "x"), ("Copy", "copy:", "c"),
+            ("Paste", "paste:", "v"), ("Select All", "selectAll:", "a")
+        ])
+        edit.items.first { $0.action == NSSelectorFromString("redo:") }?.keyEquivalentModifierMask = [.command, .shift]
+        NSApp.windowsMenu = addMenu("Window", items: [
+            ("Minimize", "performMiniaturize:", "m"), ("Zoom", "performZoom:", ""),
+            ("", "", ""), ("Bring All to Front", "arrangeInFront:", "")
+        ])
+        return menu
     }
 }
 
@@ -23,8 +57,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var libraryWindowController: LibraryWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
         guard becomePrimaryInstance() else { return }
+        NSApp.setActivationPolicy(.regular)
 
         let store = SessionStore()
         let coordinator = CaptureCoordinator(store: store)
@@ -57,6 +91,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         libraryWindowController?.show()
         return true
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
     }
 
     @objc private func showExistingLibrary(_ notification: Notification) {

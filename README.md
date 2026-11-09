@@ -38,6 +38,8 @@ The remaining sections describe the Mac app unless stated otherwise.
 
 The library opens when Reprise starts. Select a session to see the full command, folder, and notes. Choose **Default terminal** in the library sidebar or menubar menu: Apple Terminal, Ghostty, or iTerm2. The choice is saved and the Resume button shows the selected app. It opens a new window, changes to the project directory, and starts the appropriate CLI. Choose a new folder if the project has moved. The installed CLI must be available in your shell and signed in.
 
+Reprise appears in both the Mac Dock and menu bar. Clicking its Dock icon opens the library, including when the window is closed or minimized. Closing the library keeps Reprise and automatic discovery running; use Reprise → Quit Reprise or the menu bar's Quit action to exit.
+
 Reprise keeps one running instance per macOS user, including when you open a second app copy from a build folder or disk image. Opening it again brings the existing library forward. Quit older releases before replacing the app during an update.
 
 The library shows one row per project directory, with sessions from different assistants together. Selecting a project chooses its latest session; use its history to resume an earlier conversation. Project names alone are never used for grouping, so two folders with the same name stay separate.

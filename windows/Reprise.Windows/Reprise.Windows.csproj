@@ -8,7 +8,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>Reprise</AssemblyName>
     <RootNamespace>Reprise.Windows</RootNamespace>
-    <Version>1.6.0</Version>
+    <Version>1.6.1</Version>
     <ApplicationIcon>Assets/Reprise.ico</ApplicationIcon>
     <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
