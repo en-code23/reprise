@@ -28,7 +28,7 @@
       content="https://en-code23.github.io/reprise/assets/library-light.png"
     />
     <link rel="icon" href="assets/reprise-icon.png?v=1.5.1" />
-    <link rel="stylesheet" href="styles.css?v=1.6.0" />
+    <link rel="stylesheet" href="styles.css?v=1.7.0" />
   </head>
   <body>
     <header class="navigation wrap">
@@ -108,7 +108,7 @@
           </div>
           <img
             id="app-preview"
-            src="assets/library-light.png"
+            src="assets/library-light.png?v=1.7.0"
             alt="Reprise project library: five project folders, with 18 Billing portal sessions grouped into one row and a Resume in Terminal action."
             width="1180"
             height="800"
@@ -136,7 +136,8 @@
           <h2>You see projects,<br />not repeated names.</h2>
           <p>
             One directory gets one place in your library, even across
-            assistants. Previous sessions live inside the project, newest first.
+            assistants. Give each conversation a name, then find it in the project's
+            history or search. Previous sessions stay available, newest first.
           </p>
         </article>
         <article>
@@ -175,6 +176,17 @@
       <section class="questions wrap" id="questions">
         <h2>A few useful details.</h2>
         <div class="question-list">
+          <details>
+            <summary>Can I name individual sessions?</summary>
+            <p>
+              Yes. Reprise imports recorded Codex, Claude, and Grok titles when available.
+              On Mac, select a session and click Rename; on Windows, choose Rename / edit.
+              You can also enter a name while adding a screenshot or command. Names are
+              searchable and stay saved when sessions sync. Clear your custom name to use
+              the imported title again. Naming a session in Reprise leaves its project
+              and resume command intact.
+            </p>
+          </details>
           <details>
             <summary>Can I separate desktop app and CLI sessions?</summary>
             <p>
@@ -289,6 +301,6 @@
         >MIT License</a
       >
     </footer>
-    <script src="app.js?v=1.6.0"></script>
+    <script src="app.js?v=1.7.0"></script>
   </body>
 </html>

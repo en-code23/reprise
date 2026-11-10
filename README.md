@@ -27,10 +27,18 @@ Windows sessions and preferences live in `%LOCALAPPDATA%\RepriseLibrary`, outsid
 Build on Windows with .NET 10 and the Visual Studio C++ redistributable files available:
 
 ```powershell
-./scripts/build-windows.ps1 -Version 1.6.0
+./scripts/build-windows.ps1 -Version 1.7.0
 ```
 
 The script runs core checks, publishes a self-contained app, verifies its UI/OCR on Windows, and builds the installer and update packages with pinned Velopack tooling. `-TestInstaller` additionally installs and tests the package on a clean CI runner. Windows previews are saved under `build/windows/qa/`. Run the portable core checks on any .NET 10 host with `dotnet run --project windows/Reprise.Core.Tests -c Release`.
+
+## Session names on Mac and Windows
+
+Select a project, then choose a session by name. On Mac, click **Rename** beside the selected session's name, or right-click its history row. On Windows, use **Rename / edit** or double-click the session row. A Session name field is also available when adding a screenshot or entering a command.
+
+Saved names are imported from Codex's `session_index.jsonl`, Claude's `custom-title` rename records, and Grok's `generated_title` metadata. You can give any session your own name in Reprise. Your name survives sync and restart; clear the field to use the latest imported name again. Entries without a name show a short session-ID fallback. Names are searchable, and changing one leaves the project grouping and resume command intact. Reprise does not write names back to the original CLI files.
+
+The Codex index read is limited to its most recent 8 MB. Claude name discovery additionally reads up to 64 KB from the end of a transcript, retaining only explicit rename records. Names outside these bounds may need to be entered manually. Names are normalized to one line and limited to 200 characters.
 
 The remaining sections describe the Mac app unless stated otherwise.
 
@@ -48,7 +56,7 @@ The library shows one row per project directory, with sessions from different as
 
 Each session shows its recorded source: **Desktop app**, **CLI**, **IDE extension**, **SDK / automation**, **Multiple clients**, or **Unknown**. Combine an assistant filter with the **All sources** menu to show, for example, Codex desktop sessions or Claude CLI sessions without splitting the project library into duplicate rows.
 
-Codex detection uses specific `originator` markers, preferring them over the broad `source` value (Desktop can also report `vscode`). Claude detection uses top-level `entrypoint` metadata such as `cli`, `claude-desktop`, `sdk-cli`, and `sdk-py`. Multiple recognised entrypoints in the scanned portion are labelled Multiple clients. Discovery still reads only the first 256 KB of a file; it cannot reliably identify every client used throughout the whole conversation.
+Codex detection uses specific `originator` markers, preferring them over the broad `source` value (Desktop can also report `vscode`). Claude detection uses top-level `entrypoint` metadata such as `cli`, `claude-desktop`, `sdk-cli`, and `sdk-py`. Multiple recognised entrypoints in the scanned portion are labelled Multiple clients. Source detection uses only the first 256 KB of a file; it cannot reliably identify every client used throughout the whole conversation.
 
 Records without enough evidence stay Unknown. Use **Session details → Session source** to correct a label or select Automatic to return to metadata detection. The same selector is available during screenshot/manual capture review. On the next sync, old records gain metadata labels without losing your edits or overrides.
 
@@ -74,7 +82,7 @@ The release workflow requires the repository secret `SPARKLE_PRIVATE_KEY`. Keep 
 
 While Reprise is running, it scans `~/.codex/sessions`, `~/.claude/projects`, and `~/.grok/sessions` at startup and every 30 seconds. `CODEX_HOME`, `CLAUDE_CONFIG_DIR`, and `GROK_HOME` are respected when present in the app's environment. Use **Sync now** for an immediate refresh, or turn off **Auto-save local sessions** at the bottom of the library.
 
-Only session ID, assistant, project directory, activity time, and source metadata are retained. Conversation messages and tool output are not imported. Reading is limited to the first 256 KB of Codex/Claude transcripts. For Grok Build, only `summary.json` is read, with a 1 MB limit; its `info.id` and `info.cwd` fields are authoritative, and its saved activity timestamps take precedence over the file modification time. Grok transcripts, prompts, generated titles, and conversation summaries are not imported. Unsupported or incomplete files are skipped and may be found on a later scan. Nested subagent folders and symbolic-link summaries are excluded.
+Only session ID, name, assistant, project directory, activity time, and source metadata are retained. Conversation messages and tool output are not imported. Header reading is limited to the first 256 KB of Codex/Claude transcripts; the additional name metadata reads are bounded as described above. For Grok Build, only `summary.json` is read, with a 1 MB limit; its `info.id` and `info.cwd` fields are authoritative, and its saved activity timestamps take precedence over the file modification time. Grok's generated title is retained as the session name; transcripts, prompts, and conversation summaries are not imported. Unsupported or incomplete files are skipped and may be found on a later scan. Nested subagent folders and symbolic-link summaries are excluded.
 
 Grok Build's summary format is shared by TUI, headless, and ACP clients and does not reliably identify the originating client. Imported Grok sources therefore stay Unknown unless set manually. This integration supports the installed Grok Build format, not arbitrary third-party Grok clients or cloud chat histories. See [Grok Build's session format](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-pager/docs/user-guide/17-sessions.md).
 

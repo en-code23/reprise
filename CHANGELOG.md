@@ -1,5 +1,12 @@
 # Release notes
 
+## 1.7.0
+
+- Add editable, searchable session names on Mac and Windows, separate from project names and resume commands. Name sessions during capture or rename them from the library.
+- Import recorded Codex, Claude, and Grok session titles using bounded local metadata reads. Show a short session-ID fallback when no title is available.
+- Keep custom names during sync, duplicate capture, and restart. Clearing a custom name restores the latest imported title. Existing libraries load without migration or deleted sessions.
+- Show names in session history and Mac menu bar recents, and update the website's native app previews and naming instructions.
+
 ## 1.6.1
 
 - Show the Mac app in the Dock and app switcher as well as the menu bar. Clicking its Dock icon opens the library and restores a minimized library window.
