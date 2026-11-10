@@ -16,7 +16,7 @@ internal static class UiSmoke
             var store = new SessionStore(temporary);
             foreach (var (project, folder) in new[] { ("Billing portal", @"C:\Projects\billing-portal"), ("Studio website", @"C:\Projects\studio"), ("Search service", @"C:\Projects\search") })
                 foreach (var model in new[] { "codex", "claude", "grok" })
-                    store.Upsert(new Session { Project = project, ProjectDirectory = folder, Model = model, Command = Commands.Build(model, Guid.NewGuid().ToString()), Note = "Continue the payment retry timeline. Tests are passing; next up is the failure state.", DetectedAutomatically = true, DetectedOrigin = model == "grok" ? "Unknown" : "CLI" });
+                    store.Upsert(new Session { Project = project, ProjectDirectory = folder, Model = model, DetectedName = model == "codex" ? "Payment retry timeline" : model == "claude" ? "Checkout failure state" : "Webhook tests", Command = Commands.Build(model, Guid.NewGuid().ToString()), Note = "Continue the payment retry timeline. Tests are passing; next up is the failure state.", DetectedAutomatically = true, DetectedOrigin = model == "grok" ? "Unknown" : "CLI" });
             using (var window = new LibraryWindow(store, true))
             {
                 window.Show();

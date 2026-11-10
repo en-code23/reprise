@@ -48,11 +48,14 @@ struct ResumeSession: Identifiable, Codable, Hashable, Sendable {
     var detectedOrigin: SessionOrigin?
     var originOverride: SessionOrigin?
     var sourceEvidence: [String]?
+    var name: String?
+    var detectedName: String?
 
     init(
         id: UUID = UUID(),
         model: AssistantModel,
         project: String,
+        name: String? = nil,
         projectDirectory: String? = nil,
         note: String,
         command: String,
@@ -63,6 +66,7 @@ struct ResumeSession: Identifiable, Codable, Hashable, Sendable {
         self.id = id
         self.model = model
         self.project = project
+        self.name = SessionName.clean(name)
         self.projectDirectory = projectDirectory
         self.note = note
         self.command = command
@@ -73,6 +77,17 @@ struct ResumeSession: Identifiable, Codable, Hashable, Sendable {
 
     var identityKey: String { discoveryKey ?? "\(model.rawValue):\(CommandParser.canonicalize(command))" }
     var origin: SessionOrigin { originOverride ?? detectedOrigin ?? .unknown }
+    var sessionIdentifier: String { command.split(separator: " ").last.map(String.init) ?? id.uuidString }
+    var displayName: String { SessionName.clean(name) ?? SessionName.clean(detectedName) ?? "Session · \(sessionIdentifier.suffix(8))" }
+}
+
+enum SessionName {
+    static func clean(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let words = value.components(separatedBy: .whitespacesAndNewlines.union(.controlCharacters).subtracting(CharacterSet(charactersIn: "\u{200D}")))
+            .filter { !$0.isEmpty }.joined(separator: " ")
+        return words.isEmpty ? nil : String(words.prefix(200))
+    }
 }
 
 struct ParsedResumeCommand: Sendable {

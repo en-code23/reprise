@@ -33,7 +33,7 @@ internal sealed class LibraryWindow : Form
         resume = Theme.Button("Resume", (_, _) => Act(() => NativeServices.Resume(CurrentSession!, store.Preferences.Terminal)), true);
         editor = Theme.Button("Open in editor", (_, _) => OpenCurrentEditor());
         copy = Theme.Button("Copy command", (_, _) => Act(() => { Clipboard.SetText(CurrentSession!.Command); message.Text = "Resume command copied."; }));
-        edit = Theme.Button("Edit details", (_, _) => ShowCapture(CurrentSession));
+        edit = Theme.Button("Rename / edit", (_, _) => ShowCapture(CurrentSession));
         remove = Theme.Button("Remove session", (_, _) =>
         {
             if (CurrentSession is not { } session) return;
@@ -121,7 +121,9 @@ internal sealed class LibraryWindow : Form
         detail.Controls.Add(Theme.Label("Sessions · latest first", 12, true));
         history.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize; history.RowTemplate.Height = 40;
         history.DefaultCellStyle.SelectionBackColor = Theme.Sage; history.DefaultCellStyle.SelectionForeColor = Theme.Ink; history.DefaultCellStyle.Padding = new Padding(5);
-        history.Columns.Add("Assistant", "Assistant"); history.Columns.Add("Source", "Source"); history.Columns.Add("Updated", "Saved"); history.Columns.Add("Session", "Session");
+        history.Columns.Add("Name", "Session name"); history.Columns.Add("Assistant", "Assistant"); history.Columns.Add("Source", "Source"); history.Columns.Add("Updated", "Saved");
+        history.Columns[0].FillWeight = 170; history.Columns[1].FillWeight = 75; history.Columns[2].FillWeight = 100; history.Columns[3].FillWeight = 65;
+        history.CellDoubleClick += (_, e) => { if (e.RowIndex >= 0) ShowCapture(CurrentSession); };
         history.SelectionChanged += (_, _) => { if (!refreshing) ShowSession(); };
         detail.Controls.Add(history);
         var sessionDetails = new TabControl { Height = 145, Margin = new Padding(0, 10, 0, 8) };
@@ -177,9 +179,11 @@ internal sealed class LibraryWindow : Form
         if (CurrentProject is { } group)
             foreach (var session in group.Sessions)
             {
-                var index = history.Rows.Add(session.Model, session.Origin, session.CreatedAt.ToLocalTime().ToString("MMM d"), session.Command.Split(' ').LastOrDefault() is { } id ? id[^Math.Min(8, id.Length)..] : "");
+                var index = history.Rows.Add(session.DisplayName, session.Model, session.Origin, session.CreatedAt.ToLocalTime().ToString("MMM d"));
                 history.Rows[index].Tag = session;
-                history.Rows[index].Cells[2].ToolTipText = session.CreatedAt.ToLocalTime().ToString("f");
+                history.Rows[index].Cells[0].ToolTipText = session.DisplayName + "\n" + session.Command;
+                history.Rows[index].Cells[2].ToolTipText = session.Origin;
+                history.Rows[index].Cells[3].ToolTipText = session.CreatedAt.ToLocalTime().ToString("f");
             }
         if (history.Rows.Count > 0) { history.ClearSelection(); history.Rows[0].Selected = true; }
         refreshing = false; ShowSession();

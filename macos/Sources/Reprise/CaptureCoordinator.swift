@@ -15,6 +15,7 @@ final class CaptureCoordinator: ObservableObject {
     @Published var model: AssistantModel = .codex
     @Published var command = ""
     @Published var project = ""
+    @Published var sessionName = ""
     @Published var projectDirectory = ""
     @Published var note = ""
     @Published var detectedAutomatically = false
@@ -108,6 +109,7 @@ final class CaptureCoordinator: ObservableObject {
             sourceFileName: sourceURL?.lastPathComponent,
             detectedAutomatically: detectedAutomatically
         )
+        session.name = SessionName.clean(sessionName)
         session.originOverride = originOverride
         store?.add(session)
         if store?.storageError == nil { reset() }
@@ -122,6 +124,7 @@ final class CaptureCoordinator: ObservableObject {
         model = .codex
         command = ""
         project = ""
+        sessionName = ""
         projectDirectory = ""
         note = ""
         detectedAutomatically = false

@@ -14,6 +14,9 @@ enum SessionDiscovery {
             ?? home.appendingPathComponent(".codex")
         let claude = environment["CLAUDE_CONFIG_DIR"].map { URL(fileURLWithPath: $0) }
             ?? home.appendingPathComponent(".claude")
+        var codexNames: [String: String] = [:]
+        do { codexNames = try SessionNameMetadata.codexNames(at: codex.appendingPathComponent("session_index.jsonl")) }
+        catch { result.warnings.append("Some Codex session names could not be read.") }
         for (root, model) in [(codex.appendingPathComponent("sessions"), AssistantModel.codex),
                               (claude.appendingPathComponent("projects"), AssistantModel.claude)] {
             guard FileManager.default.fileExists(atPath: root.path) else { continue }
@@ -34,9 +37,11 @@ enum SessionDiscovery {
                     }
                     defer { try? handle.close() }
                     // Session headers are near the beginning; bound reads even for multi-GB transcripts.
-                    let data = try handle.read(upToCount: 256 * 1024) ?? Data()
+                    var data = try handle.read(upToCount: 256 * 1024) ?? Data()
+                    if model == .claude { data.append(try SessionNameMetadata.claudeTitleTail(from: handle)) }
                     let modified = try file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate ?? .now
-                    if let session = parse(data: data, model: model, modified: modified) {
+                    if var session = parse(data: data, model: model, modified: modified) {
+                        if model == .codex { session.detectedName = codexNames[session.sessionIdentifier.lowercased()] }
                         result.sessions.append(session)
                     }
                 } catch {
@@ -58,6 +63,7 @@ enum SessionDiscovery {
         var directory: String?
         var detection = OriginDetection(origin: .unknown, evidence: [])
         var entrypoints = Set<String>()
+        var names: [String: String] = [:]
         for line in data.split(separator: 0x0A) {
             guard let object = try? JSONSerialization.jsonObject(with: Data(line)) as? [String: Any] else { continue }
             if model == .codex, object["type"] as? String == "session_meta",
@@ -74,6 +80,9 @@ enum SessionDiscovery {
                 }
                 directory = object["cwd"] as? String ?? directory
                 if let entrypoint = object["entrypoint"] as? String { entrypoints.insert(entrypoint) }
+                if object["type"] as? String == "custom-title", let id = object["sessionId"] as? String {
+                    names[id.lowercased()] = SessionName.clean(object["customTitle"] as? String)
+                }
             }
         }
         if model == .claude { detection = SessionOriginDetector.claude(entrypoints: entrypoints) }
@@ -88,6 +97,7 @@ enum SessionDiscovery {
         session.discoveryKey = "\(model.rawValue):\(command)"
         session.detectedOrigin = detection.origin
         session.sourceEvidence = detection.evidence
+        session.detectedName = names[identifier.lowercased()]
         return session
     }
 }

@@ -214,6 +214,11 @@ struct CapturePopoverView: View {
                     TextField("Billing portal", text: $coordinator.project)
                 }
 
+                FieldLabel("SESSION NAME · OPTIONAL") {
+                    TextField("Fix checkout retries", text: $coordinator.sessionName)
+                        .accessibilityIdentifier("capture.sessionName")
+                }
+
                 Picker("Session source", selection: $coordinator.originOverride) {
                     Text("Unknown / not specified").tag(nil as SessionOrigin?)
                     ForEach(SessionOrigin.allCases.filter { $0 != .unknown }) { Text($0.title).tag(Optional($0)) }
@@ -381,8 +386,8 @@ private struct CompactSessionRow: View {
                 Text(session.project)
                     .font(.system(size: 11, weight: .semibold))
                     .lineLimit(1)
-                Text(session.command)
-                    .font(.system(size: 11, design: .monospaced))
+                Text(session.displayName)
+                    .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }

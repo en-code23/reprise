@@ -296,6 +296,14 @@ struct LibraryView: View {
                         }
                     }
                     VStack(alignment: .leading, spacing: 8) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(session.displayName).font(.system(size: 14, weight: .semibold))
+                                .lineLimit(2).textSelection(.enabled).accessibilityIdentifier("session.name")
+                            Spacer()
+                            Button("Rename") { editing = session }
+                                .buttonStyle(RepriseQuietButtonStyle()).font(.system(size: 12))
+                                .help("Name this conversation without changing the project name")
+                        }
                         Text("COMMAND").font(.system(size: 10, weight: .semibold)).tracking(1).foregroundStyle(.secondary)
                         Text(session.command).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
                             .accessibilityIdentifier("session.command")
@@ -331,12 +339,13 @@ struct LibraryView: View {
                 Image(systemName: item.model.symbol).foregroundStyle(item.model.tint).frame(width: 18)
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
-                        Text(item.model.displayName).fontWeight(.medium)
-                        Text(item.origin.title).foregroundStyle(.secondary)
+                        Text(item.displayName).fontWeight(.medium).lineLimit(1).help(item.displayName)
                         if latest { Text("Latest").font(.system(size: 10)).foregroundStyle(.secondary) }
                     }.font(.system(size: 12))
-                    Text(item.createdAt, format: .dateTime.month(.abbreviated).day().hour().minute())
-                        .font(.system(size: 11)).foregroundStyle(.secondary)
+                    HStack(spacing: 6) {
+                        Text("\(item.model.displayName) · \(item.origin.title)")
+                        Text(item.createdAt, format: .dateTime.month(.abbreviated).day().hour().minute())
+                    }.font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
                 }
                 Spacer()
                 Text(String(item.command.split(separator: " ").last?.suffix(8) ?? ""))
@@ -345,6 +354,7 @@ struct LibraryView: View {
             }.foregroundStyle(.primary).padding(10).frame(maxWidth: .infinity)
                 .background(selected ? Color.repriseGreen.opacity(0.08) : .clear, in: RoundedRectangle(cornerRadius: 7))
         }.buttonStyle(RepriseRowButtonStyle()).accessibilityIdentifier("library.session.\(item.id)")
+            .contextMenu { Button("Rename session…") { editing = item } }
     }
 
     private func chooseDirectory(_ project: ProjectGroup) {
@@ -375,11 +385,16 @@ struct LibraryView: View {
 private struct SessionEditor: View {
     @Environment(\.dismiss) private var dismiss
     @State var session: ResumeSession
+    @FocusState private var nameFocused: Bool
     let save: (ResumeSession) -> Void
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text("Session details").font(.title2.weight(.semibold))
             Form {
+                TextField("Session name", text: Binding(get: { session.name ?? "" }, set: { session.name = $0 }),
+                    prompt: Text(session.detectedName ?? "Fix checkout retries"))
+                    .focused($nameFocused).accessibilityIdentifier("sessionEditor.name")
+                Text("Leave blank to use the imported name or session ID.").font(.caption).foregroundStyle(.secondary)
                 TextField("Project name", text: $session.project)
                 Picker("Session source", selection: $session.originOverride) {
                     Text("Automatic (\((session.detectedOrigin ?? .unknown).title))").tag(nil as SessionOrigin?)
@@ -398,6 +413,6 @@ private struct SessionEditor: View {
                 Button("Save") { save(session); dismiss() }.buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
                     .disabled(session.project.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || session.command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-        }.padding(24).frame(width: 560)
+        }.padding(24).frame(width: 560).onAppear { nameFocused = true }
     }
 }

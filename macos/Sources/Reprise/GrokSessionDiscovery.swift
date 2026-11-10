@@ -61,6 +61,7 @@ enum GrokSessionDiscovery {
         // TUI, headless, and ACP all share this format; it does not identify the client.
         session.detectedOrigin = .unknown
         session.sourceEvidence = ["format: Grok Build summary.json"]
+        session.detectedName = SessionName.clean(summary["generated_title"] as? String)
         return session
     }
 

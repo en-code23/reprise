@@ -60,8 +60,11 @@ public sealed class SessionStore
     public void Upsert(Session session)
     {
         session.Command = Commands.Canonicalize(session.Command);
+        session.Name = SessionNames.Clean(session.Name);
         var index = Sessions.FindIndex(s => s.Id == session.Id || s.Identity.Equals(session.Identity, StringComparison.OrdinalIgnoreCase));
-        if (index >= 0) Sessions[index] = session with { Id = Sessions[index].Id };
+        if (index >= 0) Sessions[index] = session with { Id = Sessions[index].Id,
+            Name = session.Id == Sessions[index].Id ? session.Name : session.Name ?? Sessions[index].Name,
+            DetectedName = session.DetectedName ?? Sessions[index].DetectedName };
         else Sessions.Add(session);
         Preferences.Dismissed.Remove(session.Identity);
         Save(); SavePreferences();
@@ -77,6 +80,7 @@ public sealed class SessionStore
             {
                 previous.CreatedAt = session.CreatedAt;
                 previous.DetectedOrigin = session.DetectedOrigin;
+                if (SessionNames.Clean(session.DetectedName) is { } name) previous.DetectedName = name;
             }
         }
         Sessions = Sessions.OrderByDescending(s => s.CreatedAt).ToList(); Save();

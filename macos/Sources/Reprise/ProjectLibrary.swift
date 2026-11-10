@@ -57,7 +57,7 @@ enum ProjectLibrary {
             let directory = normalizedDirectory(ordered[0].projectDirectory)
             return ProjectGroup(id: key, directory: directory, area: area(for: directory), sessions: ordered)
         }.filter { group in
-            query.isEmpty || ([group.title, group.directory ?? ""] + group.sessions.flatMap { [$0.note, $0.command, $0.project, $0.origin.title] })
+            query.isEmpty || ([group.title, group.directory ?? ""] + group.sessions.flatMap { [$0.displayName, $0.note, $0.command, $0.project, $0.origin.title] })
                 .joined(separator: " ").localizedCaseInsensitiveContains(query)
         }.sorted { $0.latest.createdAt > $1.latest.createdAt }
     }

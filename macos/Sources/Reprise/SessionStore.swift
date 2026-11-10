@@ -32,13 +32,16 @@ final class SessionStore: ObservableObject {
     func add(_ session: ResumeSession) {
         var session = session
         session.command = CommandParser.canonicalize(session.command)
+        session.name = SessionName.clean(session.name)
         if let index = sessions.firstIndex(where: { $0.identityKey == session.identityKey }) {
             let previous = sessions[index]
             let detectedOrigin = session.detectedOrigin ?? previous.detectedOrigin
             let originOverride = session.originOverride ?? previous.originOverride
             let evidence = session.sourceEvidence ?? previous.sourceEvidence
             let discoveryKey = session.discoveryKey ?? previous.discoveryKey
-            session = ResumeSession(id: sessions[index].id, model: session.model, project: session.project,
+            let name = session.name ?? previous.name
+            let detectedName = session.detectedName ?? previous.detectedName
+            session = ResumeSession(id: sessions[index].id, model: session.model, project: session.project, name: name,
                 projectDirectory: session.projectDirectory, note: session.note, command: session.command,
                 createdAt: session.createdAt, sourceFileName: session.sourceFileName,
                 detectedAutomatically: session.detectedAutomatically)
@@ -46,6 +49,7 @@ final class SessionStore: ObservableObject {
             session.originOverride = originOverride
             session.sourceEvidence = evidence
             session.discoveryKey = discoveryKey
+            session.detectedName = detectedName
             sessions[index] = session
         } else { sessions.insert(session, at: 0) }
         save()
@@ -55,6 +59,7 @@ final class SessionStore: ObservableObject {
         guard let index = sessions.firstIndex(where: { $0.id == session.id }) else { return }
         var updated = session
         updated.command = CommandParser.canonicalize(session.command)
+        updated.name = SessionName.clean(session.name)
         sessions[index] = updated
         save()
     }
@@ -103,6 +108,10 @@ final class SessionStore: ObservableObject {
         var indices = Dictionary(sessions.enumerated().map { ($0.element.identityKey, $0.offset) }, uniquingKeysWith: { first, _ in first })
         for session in incoming where !dismissed.contains(session.identityKey) {
             if let index = indices[session.identityKey] {
+                if let name = SessionName.clean(session.detectedName), sessions[index].detectedName != name {
+                    sessions[index].detectedName = name
+                    changed = true
+                }
                 if sessions[index].detectedOrigin != session.detectedOrigin || sessions[index].sourceEvidence != session.sourceEvidence {
                     sessions[index].detectedOrigin = session.detectedOrigin
                     sessions[index].sourceEvidence = session.sourceEvidence

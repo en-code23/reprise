@@ -7,6 +7,8 @@ public sealed record Session
     public Guid Id { get; init; } = Guid.NewGuid();
     public string Model { get; set; } = "codex";
     public string Project { get; set; } = "";
+    public string? Name { get; set; }
+    public string? DetectedName { get; set; }
     public string? ProjectDirectory { get; set; }
     public string Note { get; set; } = "";
     public string Command { get; set; } = "";
@@ -17,6 +19,10 @@ public sealed record Session
     public string? OriginOverride { get; set; }
     public string Origin => OriginOverride ?? DetectedOrigin;
     public string Identity => Model.ToLowerInvariant() + ":" + Commands.Canonicalize(Command);
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string SessionIdentifier => Command.Split(' ', StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? Id.ToString();
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string DisplayName => SessionNames.Clean(Name) ?? SessionNames.Clean(DetectedName) ?? "Session · " + SessionIdentifier[^Math.Min(8, SessionIdentifier.Length)..];
 }
 
 public static class Commands
@@ -98,7 +104,7 @@ public sealed record ProjectGroup(string Key, IReadOnlyList<Session> Sessions)
     public static List<ProjectGroup> Group(IEnumerable<Session> sessions, string area = "Projects", string model = "All assistants", string source = "All sources", string query = "") =>
         sessions.Where(s => (model == "All assistants" || s.Model.Equals(model, StringComparison.OrdinalIgnoreCase)) &&
             (source == "All sources" || s.Origin == source) &&
-            (string.IsNullOrWhiteSpace(query) || $"{s.Project} {s.ProjectDirectory} {s.Note} {s.Command}".Contains(query, StringComparison.OrdinalIgnoreCase)))
+            (string.IsNullOrWhiteSpace(query) || $"{s.DisplayName} {s.Project} {s.ProjectDirectory} {s.Note} {s.Command}".Contains(query, StringComparison.OrdinalIgnoreCase)))
         .GroupBy(s => ProjectPaths.Normalize(s.ProjectDirectory) ?? "unassigned:" + s.Id, StringComparer.OrdinalIgnoreCase)
         .Select(g => new ProjectGroup(g.Key, g.OrderByDescending(s => s.CreatedAt).ToList()))
         .Where(g => g.Area == area).OrderByDescending(g => g.Latest.CreatedAt).ToList();

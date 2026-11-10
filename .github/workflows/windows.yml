@@ -18,7 +18,7 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Build, test, render, and package
         shell: pwsh
-        run: ./scripts/build-windows.ps1 -Version 1.6.1 -TestInstaller
+        run: ./scripts/build-windows.ps1 -Version 1.7.0 -TestInstaller
       - name: Upload Windows installer and previews
         if: always()
         uses: actions/upload-artifact@v4
@@ -27,3 +27,9 @@ jobs:
           path: |
             dist/windows/*
             build/windows/qa/*
+      - name: Upload Windows UI previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-previews
+          path: build/windows/qa/*
