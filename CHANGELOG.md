@@ -3,6 +3,7 @@
 ## 1.8.0
 
 - Replace the three-column library with a native project list and full session history. Move preferences into a separate Settings window, keep Resume, Copy, and Open in editor together, and collapse technical details by default.
+- Simplify the Mac capture popup with native form fields, optional source details, and a smaller screenshot target. Show the image preview only for actual screenshot captures.
 - Read older and archived Codex history, including metadata from the local read-only history index. Keep conversations with missing transcripts as named references, clearly mark History not local, and disable terminal launch until their history is available.
 - Recover older Claude sessions whose directory metadata follows a large queued-input record. Read bounded, metadata-only tails and respect custom titles over generated titles.
 - Restrict library search to folder names on Mac and Windows. Ignore commands, session titles, notes, and parent paths while preserving a matching project's complete history.

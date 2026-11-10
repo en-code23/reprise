@@ -70,7 +70,7 @@ struct CapturePopoverView: View {
 
     private var headerSubtitle: String {
         switch coordinator.phase {
-        case .idle: "Resume your AI coding sessions"
+        case .idle: "Local coding sessions"
         case .reading: "Reading terminal screenshot"
         case .review: "Review before saving"
         }
@@ -100,14 +100,10 @@ struct CapturePopoverView: View {
             if !store.sessions.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("RECENT PROJECTS")
-                            .font(.system(size: 11, weight: .bold))
-                            .tracking(0.8)
-                            .foregroundStyle(.tertiary)
+                        Text("Recent projects")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.secondary)
                         Spacer()
-                        Button("Open library", action: openLibrary)
-                            .buttonStyle(RepriseQuietButtonStyle())
-                            .font(.system(size: 11, weight: .semibold))
                     }
 
                     ForEach(Array(ProjectLibrary.groups(store.sessions).filter { $0.area == .projects }.prefix(3))) { project in
@@ -148,111 +144,47 @@ struct CapturePopoverView: View {
 
     private var reviewView: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 13) {
-                HStack(spacing: 8) {
-                    Image(systemName: coordinator.detectedAutomatically ? "checkmark.circle.fill" : "pencil.circle.fill")
-                    Text(coordinator.detectedAutomatically ? "Resume command detected" : "Check the details manually")
-                    Spacer()
-                    if coordinator.detectedAutomatically {
-                        Text("AUTO")
-                            .font(.system(size: 11, weight: .bold))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(.white.opacity(0.6), in: Capsule())
-                    }
+            VStack(alignment: .leading, spacing: 16) {
+                if coordinator.detectedAutomatically {
+                    Label("Command detected. Review before saving.", systemImage: "checkmark.circle")
+                        .font(.system(size: 12)).foregroundStyle(.secondary)
                 }
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(coordinator.detectedAutomatically ? Color.repriseGreen : Color.orange)
-                .padding(10)
-                .background(
-                    (coordinator.detectedAutomatically ? Color.repriseGreen : Color.orange)
-                        .opacity(0.10),
-                    in: RoundedRectangle(cornerRadius: 8, style: .continuous)
-                )
-
                 if let error = coordinator.errorMessage {
-                    Text(error)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+                    Label(error, systemImage: "exclamationmark.circle").font(.system(size: 12)).foregroundStyle(.red)
                 }
-
-                HStack(alignment: .top, spacing: 12) {
-                    ScreenshotPreview(image: coordinator.previewImage)
-                        .frame(width: 128, height: 96)
-
-                    VStack(spacing: 10) {
-                        LabeledContent("Assistant") {
-                            Picker("Assistant", selection: $coordinator.model) {
-                                ForEach(AssistantModel.allCases) { model in
-                                    Text(model.displayName).tag(model)
-                                }
-                            }
-                            .labelsHidden()
-                            .frame(width: 132)
-                        }
+                if coordinator.previewImage != nil {
+                    ScreenshotPreview(image: coordinator.previewImage).frame(height: 90)
+                }
+                Form {
+                    Picker("Assistant", selection: $coordinator.model) {
+                        ForEach(AssistantModel.allCases) { Text($0.displayName).tag($0) }
                     }
-                }
-
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text("RESUME COMMAND")
-                                .font(.system(size: 11, weight: .bold))
-                                .tracking(0.6)
-                                .foregroundStyle(.secondary)
-                            HStack(spacing: 7) {
-                                Text("$")
-                                    .foregroundStyle(Color.repriseGreen)
-                                TextField(
-                                    CommandParser.resumeCommand(model: coordinator.model, identifier: "session-id"),
-                                    text: $coordinator.command
-                                )
-                                .textFieldStyle(.plain)
-                            }
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundStyle(Color.repriseBone)
-                            .padding(.horizontal, 10)
-                            .frame(height: 34)
-                            .background(Color.repriseTerminal, in: RoundedRectangle(cornerRadius: 7))
-                        }
-
-                FieldLabel("PROJECT NAME") {
-                    TextField("Billing portal", text: $coordinator.project)
-                }
-
-                FieldLabel("SESSION NAME · OPTIONAL") {
-                    TextField("Fix checkout retries", text: $coordinator.sessionName)
+                    TextField("Command", text: $coordinator.command,
+                        prompt: Text(CommandParser.resumeCommand(model: coordinator.model, identifier: "session-id")))
+                        .font(.system(size: 12, design: .monospaced))
+                    TextField("Project name", text: $coordinator.project, prompt: Text("Billing portal"))
+                    TextField("Session name", text: $coordinator.sessionName, prompt: Text("Optional"))
                         .accessibilityIdentifier("capture.sessionName")
-                }
-
-                Picker("Session source", selection: $coordinator.originOverride) {
-                    Text("Unknown / not specified").tag(nil as SessionOrigin?)
-                    ForEach(SessionOrigin.allCases.filter { $0 != .unknown }) { Text($0.title).tag(Optional($0)) }
-                }.font(.system(size: 11))
-
-                FieldLabel("PROJECT DIRECTORY · OPTIONAL") {
-                    HStack(spacing: 7) {
-                        Image(systemName: "folder")
-                            .foregroundStyle(.secondary)
-                        TextField("~/Developer/billing-portal", text: $coordinator.projectDirectory)
-                            .textFieldStyle(.plain)
-                        Button("Choose…") { coordinator.chooseDirectory() }
+                    LabeledContent("Project folder") {
+                        HStack(spacing: 8) {
+                            TextField("~/Developer/billing-portal", text: $coordinator.projectDirectory)
+                                .labelsHidden()
+                            Button("Choose…") { coordinator.chooseDirectory() }
+                        }
                     }
-                    .font(.system(size: 11, design: .monospaced))
-                    .padding(.horizontal, 8)
-                    .frame(height: 30)
-                    .background(.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 6))
-                }
-
-                FieldLabel("PROJECT NOTE · OPTIONAL") {
-                    TextEditor(text: $coordinator.note)
-                        .font(.system(size: 11))
-                        .frame(height: 54)
-                        .scrollContentBackground(.hidden)
-                        .padding(5)
-                        .background(.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 6))
-                }
-
-            }
-            .padding(16)
+                    TextField("Project note", text: $coordinator.note, axis: .vertical)
+                        .lineLimit(3...5)
+                }.formStyle(.columns)
+                Text("The project folder is used when opening a terminal or editor.")
+                    .font(.system(size: 11)).foregroundStyle(.secondary)
+                DisclosureGroup("Session source") {
+                    Picker("Source", selection: $coordinator.originOverride) {
+                        Text("Unknown / not specified").tag(nil as SessionOrigin?)
+                        ForEach(SessionOrigin.allCases.filter { $0 != .unknown }) { Text($0.title).tag(Optional($0)) }
+                    }.padding(.top, 8)
+                }.font(.system(size: 12))
+                Spacer(minLength: 0)
+            }.padding(20)
         }
     }
 
@@ -322,13 +254,10 @@ private struct DropTargetCard: View {
                 .buttonStyle(.bordered)
                 .controlSize(.small)
 
-            Text("PNG · JPG · HEIC · WEBP · TIFF")
-                .font(.system(size: 11, weight: .semibold))
-                .tracking(0.45)
-                .foregroundStyle(.tertiary)
+
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 220)
+        .frame(height: 180)
         .background(
             (isTargeted ? Color.repriseGreen.opacity(0.12) : Color.repriseCanvas),
             in: RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -402,26 +331,6 @@ private struct CompactSessionRow: View {
             .buttonStyle(RepriseQuietButtonStyle(tint: .primary))
             .accessibilityLabel("Copy resume command")
             .help("Copy resume command")
-        }
-    }
-}
-
-private struct FieldLabel<Content: View>: View {
-    let title: String
-    @ViewBuilder let content: Content
-
-    init(_ title: String, @ViewBuilder content: () -> Content) {
-        self.title = title
-        self.content = content()
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(title)
-                .font(.system(size: 11, weight: .bold))
-                .tracking(0.6)
-                .foregroundStyle(.secondary)
-            content
         }
     }
 }
