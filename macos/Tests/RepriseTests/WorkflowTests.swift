@@ -142,12 +142,36 @@ final class WorkflowTests: XCTestCase {
         }
     }
 
-    func testLiveDiscoveryWhenRequested() {
+    @MainActor func testLiveDiscoveryWhenRequested() throws {
         guard ProcessInfo.processInfo.environment["REPRISE_LIVE_DISCOVERY"] == "1" else { return }
         let result = SessionDiscovery.scan()
         print("Discovered metadata: Codex=\(result.sessions.filter { $0.model == .codex }.count), Claude=\(result.sessions.filter { $0.model == .claude }.count), Grok=\(result.sessions.filter { $0.model == .grok }.count), warnings=\(result.warnings.count)")
         print("Imported session names: \(result.sessions.filter { $0.detectedName != nil }.count)")
         for origin in SessionOrigin.allCases { print("Recorded source \(origin.title): \(result.sessions.filter { $0.origin == origin }.count)") }
         XCTAssertTrue(result.sessions.allSatisfy { $0.projectDirectory != nil && $0.discoveryKey != nil })
+        if let active = ProcessInfo.processInfo.environment["CODEX_THREAD_ID"] {
+            let discovered = try XCTUnwrap(result.sessions.first { $0.model == .codex && $0.sessionIdentifier == active })
+            XCTAssertNotEqual(discovered.isSubagent, true)
+            let originalFile = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/Reprise/sessions.json")
+            if FileManager.default.fileExists(atPath: originalFile.path) {
+                let temporary = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+                try FileManager.default.createDirectory(at: temporary, withIntermediateDirectories: true)
+                defer { try? FileManager.default.removeItem(at: temporary) }
+                try FileManager.default.copyItem(at: originalFile, to: temporary.appendingPathComponent("sessions.json"))
+                let store = SessionStore(directory: temporary)
+                let previous = store.sessions.first { $0.identityKey == discovered.identityKey }
+                store.mergeDiscovered(result.sessions)
+                let repaired = try XCTUnwrap(store.sessions.first { $0.identityKey == discovered.identityKey })
+                XCTAssertNotNil(repaired.projectDirectory)
+                if let previous {
+                    XCTAssertEqual(repaired.id, previous.id)
+                    XCTAssertEqual(repaired.note, previous.note)
+                    XCTAssertEqual(repaired.name, previous.name)
+                }
+                let folderName = URL(fileURLWithPath: discovered.projectDirectory!).lastPathComponent
+                XCTAssertTrue(ProjectLibrary.groups(store.sessions, query: folderName).flatMap(\.sessions).contains { $0.id == repaired.id })
+                print("Active conversation appears in its project folder after metadata merge.")
+            }
+        }
     }
 }

@@ -41,6 +41,7 @@ final class SessionStore: ObservableObject {
             let discoveryKey = session.discoveryKey ?? previous.discoveryKey
             let name = session.name ?? previous.name
             let detectedName = session.detectedName ?? previous.detectedName
+            let isSubagent = session.isSubagent ?? previous.isSubagent
             session = ResumeSession(id: sessions[index].id, model: session.model, project: session.project, name: name,
                 projectDirectory: session.projectDirectory, note: session.note, command: session.command,
                 createdAt: session.createdAt, sourceFileName: session.sourceFileName,
@@ -50,6 +51,7 @@ final class SessionStore: ObservableObject {
             session.sourceEvidence = evidence
             session.discoveryKey = discoveryKey
             session.detectedName = detectedName
+            session.isSubagent = isSubagent
             sessions[index] = session
         } else { sessions.insert(session, at: 0) }
         save()
@@ -108,6 +110,24 @@ final class SessionStore: ObservableObject {
         var indices = Dictionary(sessions.enumerated().map { ($0.element.identityKey, $0.offset) }, uniquingKeysWith: { first, _ in first })
         for session in incoming where !dismissed.contains(session.identityKey) {
             if let index = indices[session.identityKey] {
+                if let isSubagent = session.isSubagent, sessions[index].isSubagent != isSubagent {
+                    sessions[index].isSubagent = isSubagent
+                    changed = true
+                }
+                if ProjectLibrary.normalizedDirectory(sessions[index].projectDirectory) == nil,
+                   let directory = ProjectLibrary.normalizedDirectory(session.projectDirectory) {
+                    sessions[index].projectDirectory = directory
+                    let project = sessions[index].project
+                    if project.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                        project.range(of: #"(?i)^(screenshot|bildschirmfoto|screen shot|untitled project)"#, options: .regularExpression) != nil {
+                        sessions[index].project = session.project
+                    }
+                    changed = true
+                }
+                if sessions[index].discoveryKey == nil, let key = session.discoveryKey {
+                    sessions[index].discoveryKey = key
+                    changed = true
+                }
                 if let name = SessionName.clean(session.detectedName), sessions[index].detectedName != name {
                     sessions[index].detectedName = name
                     changed = true

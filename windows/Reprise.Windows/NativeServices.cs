@@ -10,7 +10,7 @@ namespace Reprise.Windows;
 
 internal static class NativeServices
 {
-    internal static string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.7.0";
+    internal static string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.7.1";
     internal static readonly string[] Terminals = ["Windows Terminal", "PowerShell", "Command Prompt"];
     internal static readonly string[] Origins = ["Unknown", "Desktop app", "CLI", "IDE extension", "SDK / automation", "Multiple clients"];
     internal static Icon LoadIcon()

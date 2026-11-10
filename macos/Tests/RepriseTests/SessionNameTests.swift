@@ -41,7 +41,8 @@ final class SessionNameTests: XCTestCase {
         edited = try XCTUnwrap(store.sessions.first); edited.name = " "
         store.update(edited)
         XCTAssertEqual(store.sessions.first?.displayName, "Renamed upstream")
-        XCTAssertEqual(ProjectLibrary.groups(store.sessions, query: "Renamed upstream").count, 1)
+        XCTAssertTrue(ProjectLibrary.groups(store.sessions, query: "Renamed upstream").isEmpty)
+        XCTAssertEqual(ProjectLibrary.groups(store.sessions, query: "billing").count, 1)
         XCTAssertEqual(ProjectLibrary.groups(store.sessions).first?.title, "Billing")
     }
 

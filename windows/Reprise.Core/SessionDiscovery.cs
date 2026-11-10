@@ -27,6 +27,7 @@ public static class SessionDiscovery
                 foreach (var file in Directory.EnumerateFiles(root, pattern, options))
                 {
                     if (Path.GetRelativePath(root, file).Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Contains("subagents", StringComparer.OrdinalIgnoreCase)) continue;
+                    if (model == "claude" && Path.GetFileName(file).StartsWith("agent-", StringComparison.OrdinalIgnoreCase)) continue;
                     try
                     {
                         using var input = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
@@ -35,7 +36,7 @@ public static class SessionDiscovery
                         var count = input.ReadAtLeast(data, data.Length, false);
                         var metadata = Encoding.UTF8.GetString(data, 0, count);
                         if (model == "claude") metadata += SessionNames.ClaudeTitleTail(input);
-                        if (Parse(metadata, model, File.GetLastWriteTimeUtc(file)) is { } session)
+                        if (Parse(metadata, model, File.GetLastWriteTimeUtc(file), includeSubagents: true) is { } session)
                         {
                             if (model == "codex") session.DetectedName = names.GetValueOrDefault(session.SessionIdentifier);
                             sessions.Add(session);
@@ -46,14 +47,16 @@ public static class SessionDiscovery
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { warnings.Add($"The {model} metadata folder could not be read."); }
         }
-        return new(sessions, warnings.ToList());
+        return new(sessions.GroupBy(s => s.Identity, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.OrderBy(s => s.IsSubagent == true ? 1 : 0).ThenByDescending(s => s.CreatedAt).First()).ToList(), warnings.ToList());
     }
     private static string? Text(JsonElement element, string key) => element.ValueKind == JsonValueKind.Object && element.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
-    public static Session? Parse(string data, string model, DateTimeOffset modified)
+    public static Session? Parse(string data, string model, DateTimeOffset modified, bool includeSubagents = false)
     {
         string? id = null, directory = null; var origin = "Unknown"; var entrypoints = new HashSet<string>();
         string? detectedName = null;
         var names = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var isSubagent = false; var classifiedClaudeConversation = false;
         if (model == "grok")
         {
             using var document = JsonDocument.Parse(data);
@@ -74,9 +77,18 @@ public static class SessionDiscovery
                 if (model == "codex" && Text(root, "type") == "session_meta" && root.TryGetProperty("payload", out var payload))
                 {
                     id = Text(payload, "id") ?? Text(payload, "session_id"); directory = Text(payload, "cwd");
+                    isSubagent = (payload.TryGetProperty("source", out var sessionSource) && sessionSource.ValueKind == JsonValueKind.Object && sessionSource.TryGetProperty("subagent", out _)) ||
+                        Text(payload, "source")?.StartsWith("subagent", StringComparison.OrdinalIgnoreCase) == true;
                     origin = CodexOrigin(Text(payload, "originator"), Text(payload, "source")); break;
                 }
-                if (model == "claude" && !(root.TryGetProperty("isSidechain", out var sidechain) && sidechain.ValueKind == JsonValueKind.True))
+                if (model == "claude" && !classifiedClaudeConversation &&
+                    (Text(root, "type") is "user" or "assistant" || Text(root, "type") == null && Text(root, "cwd") != null))
+                {
+                    classifiedClaudeConversation = true;
+                    isSubagent = root.TryGetProperty("isSidechain", out var flag) && flag.ValueKind is JsonValueKind.True or JsonValueKind.False
+                        ? flag.ValueKind == JsonValueKind.True : !string.IsNullOrEmpty(Text(root, "agentId"));
+                }
+                if (model == "claude" && (!(root.TryGetProperty("isSidechain", out var sidechain) && sidechain.ValueKind == JsonValueKind.True) || includeSubagents && isSubagent))
                 {
                     var candidate = Text(root, "sessionId");
                     if (id != null && candidate != null && id != candidate) continue;
@@ -93,8 +105,8 @@ public static class SessionDiscovery
             origin = sources.Count > 1 ? "Multiple clients" : sources.FirstOrDefault() ?? "Unknown";
             if (id != null) detectedName = names.GetValueOrDefault(id);
         }
-        if (!Guid.TryParse(id, out _) || !ProjectPaths.IsWindowsAbsolute(directory)) return null;
-        return new Session { Model = model, Project = ProjectPaths.Name(directory), ProjectDirectory = directory, Command = Commands.Build(model, id!), CreatedAt = modified, DetectedAutomatically = true, DetectedOrigin = origin, DetectedName = detectedName };
+        if (isSubagent && !includeSubagents || !Guid.TryParse(id, out _) || !ProjectPaths.IsWindowsAbsolute(directory)) return null;
+        return new Session { Model = model, Project = ProjectPaths.Name(directory), ProjectDirectory = directory, Command = Commands.Build(model, id!), CreatedAt = modified, DetectedAutomatically = true, DetectedOrigin = origin, DetectedName = detectedName, IsSubagent = isSubagent };
     }
     private static string Normalize(string? value) => (value ?? "").Trim().ToLowerInvariant().Replace('_', '-');
     public static string CodexOrigin(string? originator, string? source) => Normalize(originator) switch {

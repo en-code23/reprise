@@ -64,7 +64,8 @@ public sealed class SessionStore
         var index = Sessions.FindIndex(s => s.Id == session.Id || s.Identity.Equals(session.Identity, StringComparison.OrdinalIgnoreCase));
         if (index >= 0) Sessions[index] = session with { Id = Sessions[index].Id,
             Name = session.Id == Sessions[index].Id ? session.Name : session.Name ?? Sessions[index].Name,
-            DetectedName = session.DetectedName ?? Sessions[index].DetectedName };
+            DetectedName = session.DetectedName ?? Sessions[index].DetectedName,
+            IsSubagent = session.IsSubagent ?? Sessions[index].IsSubagent };
         else Sessions.Add(session);
         Preferences.Dismissed.Remove(session.Identity);
         Save(); SavePreferences();
@@ -78,8 +79,15 @@ public sealed class SessionStore
             if (previous == null) Sessions.Add(session);
             else
             {
+                if (ProjectPaths.Normalize(previous.ProjectDirectory) == null && ProjectPaths.Normalize(session.ProjectDirectory) != null)
+                {
+                    previous.ProjectDirectory = session.ProjectDirectory;
+                    if (string.IsNullOrWhiteSpace(previous.Project) || System.Text.RegularExpressions.Regex.IsMatch(previous.Project, @"^(screenshot|bildschirmfoto|screen shot|untitled project)", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                        previous.Project = session.Project;
+                }
                 previous.CreatedAt = session.CreatedAt;
                 previous.DetectedOrigin = session.DetectedOrigin;
+                if (session.IsSubagent is { } isSubagent) previous.IsSubagent = isSubagent;
                 if (SessionNames.Clean(session.DetectedName) is { } name) previous.DetectedName = name;
             }
         }

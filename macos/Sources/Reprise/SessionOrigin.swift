@@ -20,6 +20,15 @@ struct OriginDetection {
     let evidence: [String]
 }
 
+enum SessionSourceFilter: Hashable {
+    case mainSessions, allSources, source(SessionOrigin)
+    var origin: SessionOrigin? {
+        if case .source(let origin) = self { return origin }
+        return nil
+    }
+    var includesAutomation: Bool { self != .mainSessions }
+}
+
 enum SessionOriginDetector {
     private static func normalized(_ value: String) -> String {
         value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().replacingOccurrences(of: "_", with: "-")

@@ -9,6 +9,7 @@ public sealed record Session
     public string Project { get; set; } = "";
     public string? Name { get; set; }
     public string? DetectedName { get; set; }
+    public bool? IsSubagent { get; set; }
     public string? ProjectDirectory { get; set; }
     public string Note { get; set; } = "";
     public string Command { get; set; } = "";
@@ -101,11 +102,12 @@ public sealed record ProjectGroup(string Key, IReadOnlyList<Session> Sessions)
     public string Directory => Latest.ProjectDirectory ?? "Choose a project folder";
     public string Area => ProjectPaths.Area(Latest.ProjectDirectory);
     public override string ToString() => Name;
-    public static List<ProjectGroup> Group(IEnumerable<Session> sessions, string area = "Projects", string model = "All assistants", string source = "All sources", string query = "") =>
-        sessions.Where(s => (model == "All assistants" || s.Model.Equals(model, StringComparison.OrdinalIgnoreCase)) &&
-            (source == "All sources" || s.Origin == source) &&
-            (string.IsNullOrWhiteSpace(query) || $"{s.DisplayName} {s.Project} {s.ProjectDirectory} {s.Note} {s.Command}".Contains(query, StringComparison.OrdinalIgnoreCase)))
+    public static List<ProjectGroup> Group(IEnumerable<Session> sessions, string area = "Projects", string model = "All assistants", string source = "Main sessions", string query = "") =>
+        sessions.Where(s => s.IsSubagent != true && (model == "All assistants" || s.Model.Equals(model, StringComparison.OrdinalIgnoreCase)) &&
+            (source == "All sources" || source == "Main sessions" && s.Origin != "SDK / automation" || s.Origin == source))
         .GroupBy(s => ProjectPaths.Normalize(s.ProjectDirectory) ?? "unassigned:" + s.Id, StringComparer.OrdinalIgnoreCase)
         .Select(g => new ProjectGroup(g.Key, g.OrderByDescending(s => s.CreatedAt).ToList()))
-        .Where(g => g.Area == area).OrderByDescending(g => g.Latest.CreatedAt).ToList();
+        .Where(g => g.Area == area && (string.IsNullOrWhiteSpace(query) ||
+            ProjectPaths.Normalize(g.Latest.ProjectDirectory) is { } path && ProjectPaths.Name(path).Contains(query.Trim(), StringComparison.OrdinalIgnoreCase)))
+        .OrderByDescending(g => g.Latest.CreatedAt).ToList();
 }

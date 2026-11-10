@@ -33,11 +33,29 @@ final class ProjectLibraryTests: XCTestCase {
         XCTAssertEqual(groups.filter { $0.area == .internalSessions }.count, 1)
     }
 
-    func testSearchMatchesOlderSessionNotesWithoutSplittingProject() {
+    func testSearchOnlyMatchesFolderBasenameAndKeepsCompleteHistory() {
         var older = session("/tmp/example", time: .distantPast)
         older.note = "Fix webhook retries"
-        let groups = ProjectLibrary.groups([older, session("/tmp/example")], query: "webhook")
+        older.name = "checkout"
+        older.project = "A custom project label"
+        let records = [older, session("/tmp/example")]
+        let groups = ProjectLibrary.groups(records, query: "  EXAMPLE ")
         XCTAssertEqual(groups.count, 1)
         XCTAssertEqual(groups.first?.sessions.count, 2)
+        for query in ["webhook", "checkout", "resume", "tmp", "custom", "claude"] {
+            XCTAssertTrue(ProjectLibrary.groups(records, query: query).isEmpty, query)
+        }
+        XCTAssertTrue(ProjectLibrary.groups([session(nil)], query: "Example").isEmpty)
+    }
+
+    func testMainSessionsHideAutomationAndConfirmedSubagents() {
+        var parent = session("/tmp/example"); parent.detectedOrigin = .cli
+        var automation = session("/tmp/automation"); automation.detectedOrigin = .sdk
+        var child = session("/tmp/child"); child.isSubagent = true; child.detectedOrigin = .cli
+        let records = [parent, automation, child]
+        XCTAssertEqual(ProjectLibrary.groups(records).map(\.latest.id), [parent.id])
+        XCTAssertEqual(ProjectLibrary.groups(records, origin: .sdk).map(\.latest.id), [automation.id])
+        XCTAssertEqual(ProjectLibrary.groups(records, includeAutomation: true).count, 2)
+        XCTAssertFalse(ProjectLibrary.groups(records, includeAutomation: true).contains { $0.latest.id == child.id })
     }
 }

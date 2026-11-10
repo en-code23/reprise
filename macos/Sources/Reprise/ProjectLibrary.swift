@@ -47,8 +47,11 @@ enum ProjectLibrary {
         return components.contains(where: { [".codex", ".claude", ".chatgpt", ".grok"].contains($0) }) ? .internalSessions : .projects
     }
 
-    static func groups(_ sessions: [ResumeSession], model: AssistantModel? = nil, query: String = "", origin: SessionOrigin? = nil) -> [ProjectGroup] {
-        let candidates = sessions.filter { (model == nil || $0.model == model) && (origin == nil || $0.origin == origin) }
+    static func groups(_ sessions: [ResumeSession], model: AssistantModel? = nil, query: String = "", origin: SessionOrigin? = nil, includeAutomation: Bool = false) -> [ProjectGroup] {
+        let candidates = sessions.filter {
+            $0.isSubagent != true && (model == nil || $0.model == model) && (origin == nil || $0.origin == origin) &&
+                (includeAutomation || origin == .sdk || $0.origin != .sdk)
+        }
         let grouped = Dictionary(grouping: candidates) { session in
             normalizedDirectory(session.projectDirectory).map { "directory:" + $0 } ?? "unassigned:" + session.id.uuidString
         }
@@ -57,8 +60,8 @@ enum ProjectLibrary {
             let directory = normalizedDirectory(ordered[0].projectDirectory)
             return ProjectGroup(id: key, directory: directory, area: area(for: directory), sessions: ordered)
         }.filter { group in
-            query.isEmpty || ([group.title, group.directory ?? ""] + group.sessions.flatMap { [$0.displayName, $0.note, $0.command, $0.project, $0.origin.title] })
-                .joined(separator: " ").localizedCaseInsensitiveContains(query)
+            let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
+            return query.isEmpty || group.directory.map { URL(fileURLWithPath: $0).lastPathComponent.localizedCaseInsensitiveContains(query) } == true
         }.sorted { $0.latest.createdAt > $1.latest.createdAt }
     }
 }

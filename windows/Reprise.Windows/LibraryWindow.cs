@@ -10,9 +10,9 @@ internal sealed class LibraryWindow : Form
     private readonly ListBox projects = new() { Dock = DockStyle.Fill, DrawMode = DrawMode.OwnerDrawFixed, ItemHeight = 82, BorderStyle = BorderStyle.None, IntegralHeight = false };
     private readonly DataGridView history = new() { ReadOnly = true, AllowUserToAddRows = false, AllowUserToDeleteRows = false, MultiSelect = false, SelectionMode = DataGridViewSelectionMode.FullRowSelect, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, BackgroundColor = Color.White, BorderStyle = BorderStyle.None, Height = 160 };
     private readonly ComboBox model = Theme.Combo(["All assistants", "codex", "claude", "grok", "other"]);
-    private readonly ComboBox source = Theme.Combo(["All sources", .. NativeServices.Origins]);
+    private readonly ComboBox source = Theme.Combo(["Main sessions", "All sources", .. NativeServices.Origins]);
     private readonly ComboBox terminal = Theme.Combo(NativeServices.Terminals);
-    private readonly TextBox search = new() { PlaceholderText = "Search projects, sessions, or notes", Dock = DockStyle.Fill };
+    private readonly TextBox search = new() { PlaceholderText = "Search folder names", AccessibleName = "Search folder names", Dock = DockStyle.Fill };
     private readonly Label title = Theme.Label("Your next session belongs here", 22, true), path = Theme.Label("Add a screenshot, enter a command, or sync local sessions."), message = Theme.Label("Saved on this PC", 9);
     private readonly TextBox command = new() { AutoSize = false, ReadOnly = true, Multiline = true, WordWrap = true, MinimumSize = new Size(0, 65), Height = 65, Font = new Font("Consolas", 10), BorderStyle = BorderStyle.FixedSingle };
     private readonly TextBox note = new() { AutoSize = false, ReadOnly = true, Multiline = true, ScrollBars = ScrollBars.Vertical, MinimumSize = new Size(0, 110), Height = 110, BorderStyle = BorderStyle.FixedSingle };

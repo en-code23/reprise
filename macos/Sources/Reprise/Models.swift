@@ -50,6 +50,7 @@ struct ResumeSession: Identifiable, Codable, Hashable, Sendable {
     var sourceEvidence: [String]?
     var name: String?
     var detectedName: String?
+    var isSubagent: Bool?
 
     init(
         id: UUID = UUID(),

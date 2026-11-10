@@ -30,6 +30,7 @@ enum SessionDiscovery {
             for case let file as URL in enumerator {
                 if file.pathComponents.contains("subagents") { enumerator.skipDescendants(); continue }
                 guard file.pathExtension == "jsonl" else { continue }
+                if model == .claude && file.lastPathComponent.lowercased().hasPrefix("agent-") { continue }
                 do {
                     guard let handle = try? FileHandle(forReadingFrom: file) else {
                         result.warnings.append("Some \(model.displayName) sessions could not be read.")
@@ -40,7 +41,7 @@ enum SessionDiscovery {
                     var data = try handle.read(upToCount: 256 * 1024) ?? Data()
                     if model == .claude { data.append(try SessionNameMetadata.claudeTitleTail(from: handle)) }
                     let modified = try file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate ?? .now
-                    if var session = parse(data: data, model: model, modified: modified) {
+                    if var session = parse(data: data, model: model, modified: modified, includeSubagents: true) {
                         if model == .codex { session.detectedName = codexNames[session.sessionIdentifier.lowercased()] }
                         result.sessions.append(session)
                     }
@@ -53,27 +54,41 @@ enum SessionDiscovery {
             ?? home.appendingPathComponent(".grok")
         let grok = GrokSessionDiscovery.scan(root: grokHome.appendingPathComponent("sessions"))
         result.sessions.append(contentsOf: grok.sessions)
+        // An embedded child record must never hide a matching primary transcript.
+        result.sessions = Dictionary(grouping: result.sessions, by: \.identityKey).values.compactMap { records in
+            records.filter { $0.isSubagent != true }.max { $0.createdAt < $1.createdAt } ?? records.max { $0.createdAt < $1.createdAt }
+        }
         result.warnings.append(contentsOf: grok.warnings)
         result.warnings = Array(Set(result.warnings)).sorted()
         return result
     }
 
-    static func parse(data: Data, model: AssistantModel, modified: Date) -> ResumeSession? {
+    static func parse(data: Data, model: AssistantModel, modified: Date, includeSubagents: Bool = false) -> ResumeSession? {
         var identifier: String?
         var directory: String?
         var detection = OriginDetection(origin: .unknown, evidence: [])
         var entrypoints = Set<String>()
         var names: [String: String] = [:]
+        var isSubagent = false
+        var classifiedClaudeConversation = false
         for line in data.split(separator: 0x0A) {
             guard let object = try? JSONSerialization.jsonObject(with: Data(line)) as? [String: Any] else { continue }
             if model == .codex, object["type"] as? String == "session_meta",
                let payload = object["payload"] as? [String: Any] {
                 identifier = payload["id"] as? String ?? payload["session_id"] as? String
                 directory = payload["cwd"] as? String
+                let source = payload["source"] as? [String: Any]
+                isSubagent = source?["subagent"] != nil || (payload["source"] as? String)?.lowercased().hasPrefix("subagent") == true
                 detection = SessionOriginDetector.codex(originator: payload["originator"] as? String, source: payload["source"] as? String)
                 break
             }
-            if model == .claude, object["isSidechain"] as? Bool != true {
+            if model == .claude, !classifiedClaudeConversation,
+               object["type"] as? String == "user" || object["type"] as? String == "assistant" ||
+                (object["type"] == nil && object["cwd"] != nil) {
+                classifiedClaudeConversation = true
+                isSubagent = object["isSidechain"] as? Bool ?? !(object["agentId"] as? String ?? "").isEmpty
+            }
+            if model == .claude, object["isSidechain"] as? Bool != true || (includeSubagents && isSubagent) {
                 if let candidate = object["sessionId"] as? String {
                     if let identifier, identifier != candidate { continue }
                     identifier = candidate
@@ -86,6 +101,7 @@ enum SessionDiscovery {
             }
         }
         if model == .claude { detection = SessionOriginDetector.claude(entrypoints: entrypoints) }
+        guard !isSubagent || includeSubagents else { return nil }
         guard let identifier, UUID(uuidString: identifier) != nil,
               let directory, directory.hasPrefix("/") else { return nil }
         let command = CommandParser.resumeCommand(model: model, identifier: identifier)
@@ -98,6 +114,7 @@ enum SessionDiscovery {
         session.detectedOrigin = detection.origin
         session.sourceEvidence = detection.evidence
         session.detectedName = names[identifier.lowercased()]
+        session.isSubagent = isSubagent
         return session
     }
 }

@@ -30,7 +30,7 @@ struct LibraryView: View {
     let newCapture: () -> Void
     @State private var area: LibraryArea = .projects
     @State private var model: AssistantModel?
-    @State private var origin: SessionOrigin?
+    @State private var sourceFilter: SessionSourceFilter = .mainSessions
     @State private var search = ""
     @State private var projectID: String?
     @State private var sessionID: UUID?
@@ -46,9 +46,9 @@ struct LibraryView: View {
     @AppStorage(TerminalPreference.key) private var terminalRaw = TerminalApp.terminal.rawValue
     private var terminal: TerminalApp { TerminalApp(rawValue: terminalRaw) ?? .terminal }
 
-    private var allGroups: [ProjectGroup] { ProjectLibrary.groups(store.sessions) }
+    private var allGroups: [ProjectGroup] { ProjectLibrary.groups(store.sessions, model: model, origin: sourceFilter.origin, includeAutomation: sourceFilter.includesAutomation) }
     private var groups: [ProjectGroup] {
-        ProjectLibrary.groups(store.sessions, model: model, query: search, origin: origin).filter { $0.area == area }
+        ProjectLibrary.groups(store.sessions, model: model, query: search, origin: sourceFilter.origin, includeAutomation: sourceFilter.includesAutomation).filter { $0.area == area }
     }
     private var project: ProjectGroup? { groups.first { $0.id == projectID } }
     private var session: ResumeSession? { project?.sessions.first { $0.id == sessionID } ?? project?.latest }
@@ -83,7 +83,7 @@ struct LibraryView: View {
         }
         .onChange(of: projectID) { _, _ in sessionID = nil; copied = false; showAllSessions = false; editorStatus = nil }
         .onChange(of: sessionID) { _, _ in editorStatus = nil }
-        .onChange(of: origin) { _, _ in sessionID = nil; copied = false; showAllSessions = false }
+        .onChange(of: sourceFilter) { _, _ in sessionID = nil; copied = false; showAllSessions = false }
     }
 
     private var sidebar: some View {
@@ -126,7 +126,7 @@ struct LibraryView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("LIBRARY").font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary).padding(.bottom, 6)
                 ForEach(LibraryArea.allCases) { item in
-                    Button { area = item; model = nil; origin = nil } label: {
+                    Button { area = item; model = nil; sourceFilter = .mainSessions } label: {
                         HStack(spacing: 8) {
                             Image(systemName: item.symbol).frame(width: 16)
                             Text(item == .internalSessions ? "Internal" : item.title)
@@ -161,16 +161,17 @@ struct LibraryView: View {
             Spacer()
             HStack(spacing: 7) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("Search projects or sessions", text: $search).textFieldStyle(.plain).accessibilityLabel("Search projects")
+                TextField("Search folder names", text: $search).textFieldStyle(.plain).accessibilityLabel("Search folder names")
                 if !search.isEmpty {
                     Button { search = "" } label: { Image(systemName: "xmark.circle.fill") }
                         .buttonStyle(RepriseQuietButtonStyle(minimumSize: 32, tint: .secondary))
                         .accessibilityLabel("Clear search")
                 }
             }.font(.system(size: 12)).padding(8).frame(maxWidth: 260).background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 7))
-            Picker("Source", selection: $origin) {
-                Text("All sources").tag(nil as SessionOrigin?)
-                ForEach(SessionOrigin.allCases) { Text($0.title).tag(Optional($0)) }
+                Picker("Source", selection: $sourceFilter) {
+                    Text("Main sessions").tag(SessionSourceFilter.mainSessions)
+                    Text("All sources").tag(SessionSourceFilter.allSources)
+                    ForEach(SessionOrigin.allCases) { Text($0.title).tag(SessionSourceFilter.source($0)) }
             }.labelsHidden().accessibilityLabel("Filter by session source").frame(width: 146)
             Button(action: newCapture) { Label("Add session", systemImage: "plus") }.keyboardShortcut("n")
         }.padding(.horizontal, 24).frame(height: 68)
@@ -188,7 +189,7 @@ struct LibraryView: View {
                     Text(search.isEmpty ? "Nothing here yet" : "No matches").font(.headline)
                     Text(area == .unassigned ? "Saved entries without a project folder appear here." : "Try another filter, sync your local sessions, or add a screenshot.")
                         .font(.callout).foregroundStyle(.secondary)
-                    Button("Clear filters") { search = ""; model = nil; origin = nil }
+                    Button("Clear filters") { search = ""; model = nil; sourceFilter = .mainSessions }
                 }.padding(16)
             }
             ScrollView {
