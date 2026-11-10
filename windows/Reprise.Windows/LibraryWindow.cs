@@ -82,8 +82,10 @@ internal sealed class LibraryWindow : Form
         count.Font = new Font(Font.FontFamily, 9); count.Dock = DockStyle.Fill; count.TextAlign = ContentAlignment.MiddleLeft;
         sync.Text = "Sync"; sync.AutoSize = false; sync.Dock = DockStyle.Fill; sync.Margin = new Padding(0, 4, 4, 0);
         sync.MinimumSize = new Size(0, 36);
+        sync.Padding = Padding.Empty;
         var settings = Theme.Button("Settings", (_, _) => ShowSettings()); settings.AutoSize = false; settings.Dock = DockStyle.Fill; settings.Margin = new Padding(0, 4, 0, 0);
         settings.MinimumSize = new Size(0, 36);
+        settings.Padding = Padding.Empty;
         footer.Controls.Add(count, 0, 0); footer.Controls.Add(sync, 1, 0); footer.Controls.Add(settings, 2, 0); sidebar.Controls.Add(footer, 0, 3);
 
         var main = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 6, Padding = new Padding(20, 12, 20, 0), BackColor = Color.White, Margin = new Padding(0) };
