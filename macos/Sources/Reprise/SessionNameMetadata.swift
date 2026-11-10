@@ -2,7 +2,7 @@ import Foundation
 
 enum SessionNameMetadata {
     static let maximumIndexBytes = 8 * 1024 * 1024
-    static let maximumClaudeTailBytes = 64 * 1024
+    static let maximumClaudeTailBytes = 256 * 1024
 
     static func codexNames(at file: URL) throws -> [String: String] {
         guard FileManager.default.fileExists(atPath: file.path) else { return [:] }
@@ -37,11 +37,13 @@ enum SessionNameMetadata {
         var titles = Data()
         for line in tail.split(separator: 0x0A) {
             guard let object = try? JSONSerialization.jsonObject(with: Data(line)) as? [String: Any],
-                  object["type"] as? String == "custom-title", object["isSidechain"] as? Bool != true,
-                  let id = object["sessionId"] as? String, UUID(uuidString: id) != nil,
-                  let name = SessionName.clean(object["customTitle"] as? String) else { continue }
+                  let id = object["sessionId"] as? String, UUID(uuidString: id) != nil else { continue }
+            let keys = ["type", "sessionId", "cwd", "entrypoint", "isSidechain", "agentId", "customTitle", "aiTitle"]
+            var metadata = object.filter { keys.contains($0.key) }
+            if let name = metadata["customTitle"] as? String { metadata["customTitle"] = SessionName.clean(name) }
+            if let name = metadata["aiTitle"] as? String { metadata["aiTitle"] = SessionName.clean(name) }
             titles.append(0x0A)
-            titles.append(try JSONSerialization.data(withJSONObject: ["type": "custom-title", "sessionId": id, "customTitle": name]))
+            titles.append(try JSONSerialization.data(withJSONObject: metadata))
         }
         return titles
     }

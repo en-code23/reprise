@@ -18,7 +18,6 @@ internal sealed class LibraryWindow : Form
     private readonly TextBox note = new() { AutoSize = false, ReadOnly = true, Multiline = true, ScrollBars = ScrollBars.Vertical, MinimumSize = new Size(0, 110), Height = 110, BorderStyle = BorderStyle.FixedSingle };
     private readonly Label origin = Theme.Label("", 9), count = Theme.Label("Projects", 11, true);
     private readonly Button resume, editor, copy, edit, remove, sync, update, chooseEditor;
-    private readonly List<Button> areaButtons = [];
     private bool refreshing, syncing, exiting;
     private string area = "Projects";
     private ProjectGroup? CurrentProject => projects.SelectedItem as ProjectGroup;
@@ -28,7 +27,7 @@ internal sealed class LibraryWindow : Form
     {
         this.store = store;
         Text = "Reprise"; Font = new Font("Segoe UI", 10); BackColor = Theme.Paper; ForeColor = Theme.Ink;
-        Icon = NativeServices.LoadIcon(); MinimumSize = new Size(1000, 720); Size = new Size(1180, 820); StartPosition = FormStartPosition.CenterScreen;
+        Icon = NativeServices.LoadIcon(); MinimumSize = new Size(860, 640); Size = new Size(1040, 760); StartPosition = FormStartPosition.CenterScreen;
         AutoScaleMode = AutoScaleMode.Dpi;
         resume = Theme.Button("Resume", (_, _) => Act(() => NativeServices.Resume(CurrentSession!, store.Preferences.Terminal)), true);
         editor = Theme.Button("Open in editor", (_, _) => OpenCurrentEditor());
@@ -64,99 +63,124 @@ internal sealed class LibraryWindow : Form
 
     private void BuildLayout()
     {
-        var root = new SplitContainer { Size = new Size(1180, 820), SplitterDistance = 210, SplitterWidth = 1, IsSplitterFixed = true, FixedPanel = FixedPanel.Panel1, Panel1MinSize = 210, Panel2MinSize = 700, Dock = DockStyle.Fill };
+        var root = new SplitContainer { Size = new Size(1040, 760), SplitterDistance = 280, SplitterWidth = 1, FixedPanel = FixedPanel.Panel1, Panel1MinSize = 240, Panel2MinSize = 560, Dock = DockStyle.Fill };
         Controls.Add(root);
-        var sidebar = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1, Padding = new Padding(16), Margin = new Padding(0), BackColor = Theme.Paper };
+        var sidebar = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, Padding = new Padding(12), BackColor = Theme.Paper };
         sidebar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 70)); sidebar.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); sidebar.RowStyles.Add(new RowStyle(SizeType.AutoSize)); root.Panel1.Controls.Add(sidebar);
-        var brand = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Padding = new Padding(0, 10, 0, 0) };
-        brand.Controls.Add(new PictureBox { Image = Icon!.ToBitmap(), SizeMode = PictureBoxSizeMode.Zoom, Size = new Size(34, 34), Margin = new Padding(0, 0, 10, 0) }); brand.Controls.Add(Theme.Label("Reprise", 18, true)); sidebar.Controls.Add(brand, 0, 0);
-        var navigation = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Margin = new Padding(0) };
-        navigation.Controls.Add(Theme.Label("LIBRARY", 9, true));
-        foreach (var item in new[] { "Projects", "Unassigned", "Internal" })
-        {
-            var button = Theme.Button(item, (_, _) => { area = item; RefreshProjects(); }); button.Width = 170; button.AutoSize = false; button.Margin = new Padding(0, 0, 0, 8); button.Tag = item;
-            areaButtons.Add(button); navigation.Controls.Add(button);
-        }
-        navigation.Controls.Add(Theme.Label("ASSISTANT", 9, true)); navigation.Controls.Add(model);
-        navigation.Controls.Add(Theme.Label("SOURCE", 9, true)); navigation.Controls.Add(source);
-        model.SelectedIndexChanged += (_, _) => RefreshProjects(); source.SelectedIndexChanged += (_, _) => RefreshProjects(); sidebar.Controls.Add(navigation, 0, 1);
-        var settings = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Margin = new Padding(0), Padding = new Padding(0, 12, 0, 0) };
-        var automatic = new CheckBox { Text = "Auto-save sessions", AutoSize = true, Checked = store.Preferences.AutoDiscovery, Margin = new Padding(0, 0, 0, 12) };
-        automatic.CheckedChanged += async (_, _) => { Act(() => { store.Preferences.AutoDiscovery = automatic.Checked; store.SavePreferences(); }); if (automatic.Checked) await Sync(); };
-        settings.Controls.Add(automatic); settings.Controls.Add(Theme.Label("DEFAULT TERMINAL", 9, true));
-        terminal.SelectedItem = NativeServices.Terminals.Contains(store.Preferences.Terminal) ? store.Preferences.Terminal : "PowerShell";
-        terminal.SelectedIndexChanged += (_, _) => Act(() => { store.Preferences.Terminal = terminal.Text; store.SavePreferences(); ShowSession(); }); settings.Controls.Add(terminal);
-        settings.Controls.Add(Theme.Label("DEFAULT EDITOR", 9, true)); chooseEditor.Width = 170; chooseEditor.AutoSize = false; settings.Controls.Add(chooseEditor);
-        update.Width = 170; update.AutoSize = false; settings.Controls.Add(update);
-        sync.Width = 170; sync.AutoSize = false; settings.Controls.Add(sync);
-        var options = Theme.Button("Library options…", (_, _) =>
+        sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 44)); sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+        sidebar.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+        root.Panel1.Controls.Add(sidebar);
+        var library = Theme.Combo(["Projects", "Unassigned", "Internal"]); library.Dock = DockStyle.Fill;
+        library.SelectedIndexChanged += (_, _) => { area = library.Text; RefreshProjects(); };
+        sidebar.Controls.Add(library, 0, 0);
+        search.Margin = new Padding(0, 4, 0, 8); search.TextChanged += (_, _) => RefreshProjects(); sidebar.Controls.Add(search, 0, 1);
+        projects.BackColor = Theme.Paper; projects.ItemHeight = 66; projects.Margin = new Padding(0);
+        projects.DrawItem += DrawProject; projects.SelectedIndexChanged += (_, _) => { if (!refreshing) BindProject(); };
+        sidebar.Controls.Add(projects, 0, 2);
+        var footer = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, Margin = new Padding(0) };
+        footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); footer.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 60)); footer.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 84));
+        count.Font = new Font(Font.FontFamily, 9); count.Dock = DockStyle.Fill; count.TextAlign = ContentAlignment.MiddleLeft;
+        sync.Text = "Sync"; sync.AutoSize = false; sync.Dock = DockStyle.Fill; sync.Margin = new Padding(0, 4, 4, 0);
+        var settings = Theme.Button("Settings", (_, _) => ShowSettings()); settings.AutoSize = false; settings.Dock = DockStyle.Fill; settings.Margin = new Padding(0, 4, 0, 0);
+        footer.Controls.Add(count, 0, 0); footer.Controls.Add(sync, 1, 0); footer.Controls.Add(settings, 2, 0); sidebar.Controls.Add(footer, 0, 3);
+
+        var main = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 6, Padding = new Padding(20, 12, 20, 0), BackColor = Color.White, Margin = new Padding(0) };
+        main.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        foreach (var height in new[] { 48, 142 }) main.RowStyles.Add(new RowStyle(SizeType.Absolute, height));
+        main.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); main.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+        var detailRow = new RowStyle(SizeType.Absolute, 0); main.RowStyles.Add(detailRow); main.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
+        root.Panel2.Controls.Add(main);
+        var toolbar = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Margin = new Padding(0) };
+        var filters = Theme.Button("Filter", (_, _) => { });
+        filters.Click += (_, _) =>
         {
             var menu = new ContextMenuStrip();
-            menu.Items.Add("Restore removed sessions", null, async (_, _) => { Act(store.RestoreRemoved); await Sync(); });
-            menu.Items.Add("Open data folder", null, (_, _) => NativeServices.OpenUrl(store.DataDirectory));
-            menu.Items.Add("Quit Reprise", null, (_, _) => Quit()); menu.Show(Cursor.Position);
-        }); options.Width = 170; options.AutoSize = false; settings.Controls.Add(options);
-        foreach (var button in settings.Controls.OfType<Button>()) button.Margin = new Padding(0, 0, 0, 8);
-        sidebar.Controls.Add(settings, 0, 2);
-        var main = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1, Margin = new Padding(0), BackColor = Color.White };
-        main.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        main.RowStyles.Add(new RowStyle(SizeType.Absolute, 78)); main.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); main.RowStyles.Add(new RowStyle(SizeType.Absolute, 44)); root.Panel2.Controls.Add(main);
-        var toolbar = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, Padding = new Padding(18), Margin = new Padding(0) };
-        toolbar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); toolbar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170)); toolbar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
-        search.Margin = new Padding(0, 6, 14, 0); search.TextChanged += (_, _) => RefreshProjects(); toolbar.Controls.Add(search, 0, 0);
-        toolbar.Controls.Add(Theme.Button("Add screenshot…", (_, _) => ChooseScreenshot()), 1, 0); toolbar.Controls.Add(Theme.Button("Add session", (_, _) => ShowCapture()), 2, 0); main.Controls.Add(toolbar, 0, 0);
-        var split = new SplitContainer { Size = new Size(950, 650), SplitterDistance = 290, Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel1, Panel1MinSize = 230, Panel2MinSize = 380, SplitterWidth = 5 };
-        main.Controls.Add(split, 0, 1);
-        Shown += (_, _) => { split.SplitterDistance = Math.Min(290, split.Width - 400); };
-        var listPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12), BackColor = Color.White };
-        count.Dock = DockStyle.Top; count.Height = 32; count.AutoSize = false; listPanel.Controls.Add(projects); listPanel.Controls.Add(count); split.Panel1.Controls.Add(listPanel);
-        projects.BackColor = Color.White; projects.DrawItem += DrawProject; projects.SelectedIndexChanged += (_, _) => { if (!refreshing) BindProject(); };
-        var detail = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Padding = new Padding(22), BackColor = Theme.Paper };
-        title.AutoSize = false; title.MaximumSize = Size.Empty; title.MinimumSize = new Size(0, 36); title.Height = 36; title.AutoEllipsis = true;
-        path.AutoSize = false; path.MaximumSize = Size.Empty; path.MinimumSize = new Size(0, 30); path.Height = 30; path.AutoEllipsis = true; path.ForeColor = Theme.Secondary;
-        detail.Controls.Add(title); detail.Controls.Add(path);
-        var actions = new FlowLayoutPanel { AutoSize = true, WrapContents = true, Margin = new Padding(0, 0, 0, 10) };
-        actions.Controls.AddRange([resume, editor, copy, edit, remove]); detail.Controls.Add(actions);
-        detail.Controls.Add(Theme.Label("Sessions · latest first", 12, true));
-        history.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize; history.RowTemplate.Height = 40;
-        history.DefaultCellStyle.SelectionBackColor = Theme.Sage; history.DefaultCellStyle.SelectionForeColor = Theme.Ink; history.DefaultCellStyle.Padding = new Padding(5);
-        history.Columns.Add("Name", "Session name"); history.Columns.Add("Assistant", "Assistant"); history.Columns.Add("Source", "Source"); history.Columns.Add("Updated", "Saved");
-        history.Columns[0].FillWeight = 170; history.Columns[1].FillWeight = 75; history.Columns[2].FillWeight = 100; history.Columns[3].FillWeight = 65;
-        history.CellDoubleClick += (_, e) => { if (e.RowIndex >= 0) ShowCapture(CurrentSession); };
-        history.SelectionChanged += (_, _) => { if (!refreshing) ShowSession(); };
-        detail.Controls.Add(history);
-        var sessionDetails = new TabControl { Height = 145, Margin = new Padding(0, 10, 0, 8) };
-        var commandPage = new TabPage("Resume command"); var notePage = new TabPage("Project note");
-        command.Dock = DockStyle.Fill; note.Dock = DockStyle.Fill;
-        command.MinimumSize = Size.Empty; note.MinimumSize = Size.Empty;
-        commandPage.Controls.Add(command); notePage.Controls.Add(note);
-        sessionDetails.TabPages.AddRange([commandPage, notePage]); detail.Controls.Add(sessionDetails); detail.Controls.Add(origin);
-        detail.Controls.Add(Theme.Label("Drop a terminal screenshot anywhere in this window to add it. Closing this window keeps Reprise in the tray.", 9));
-        detail.SizeChanged += (_, _) =>
-        {
-            var width = Math.Max(300, detail.ClientSize.Width - 66);
-            foreach (Control control in detail.Controls)
+            var assistants = new ToolStripMenuItem("Assistant"); var sources = new ToolStripMenuItem("Source");
+            foreach (var item in model.Items.Cast<string>())
             {
-                if (control is Label { AutoSize: true } or FlowLayoutPanel { AutoSize: true }) control.MaximumSize = new Size(width, 0);
-                control.Width = width;
+                var option = new ToolStripMenuItem(item) { Checked = model.Text == item };
+                option.Click += (_, _) => { model.SelectedItem = item; filters.Text = model.SelectedIndex > 0 || source.SelectedIndex != 0 ? "Filtered" : "Filter"; };
+                assistants.DropDownItems.Add(option);
             }
+            foreach (var item in source.Items.Cast<string>())
+            {
+                var option = new ToolStripMenuItem(item) { Checked = source.Text == item };
+                option.Click += (_, _) => { source.SelectedItem = item; filters.Text = model.SelectedIndex > 0 || source.SelectedIndex != 0 ? "Filtered" : "Filter"; };
+                sources.DropDownItems.Add(option);
+            }
+            menu.Items.AddRange([assistants, sources]); menu.Show(filters, new Point(0, filters.Height));
         };
-        split.Panel2.Controls.Add(detail);
-        message.Dock = DockStyle.Fill; message.AutoSize = false; message.Padding = new Padding(18, 9, 12, 0); message.ForeColor = Theme.Secondary; main.Controls.Add(message, 0, 2);
+        model.SelectedIndexChanged += (_, _) => RefreshProjects(); source.SelectedIndexChanged += (_, _) => RefreshProjects();
+        toolbar.Controls.Add(filters); toolbar.Controls.Add(Theme.Button("Add session", (_, _) => ShowCapture()));
+        toolbar.Controls.Add(Theme.Button("Add screenshot…", (_, _) => ChooseScreenshot())); main.Controls.Add(toolbar, 0, 0);
+        var heading = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, Margin = new Padding(0) };
+        heading.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        heading.RowStyles.Add(new RowStyle(SizeType.Absolute, 40)); heading.RowStyles.Add(new RowStyle(SizeType.Absolute, 32)); heading.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        title.Font = new Font(Font.FontFamily, 18, FontStyle.Bold); title.Dock = DockStyle.Fill; title.AutoSize = false; title.AutoEllipsis = true;
+        path.Dock = DockStyle.Fill; path.AutoSize = false; path.AutoEllipsis = true; path.ForeColor = Theme.Secondary;
+        heading.Controls.Add(title, 0, 0); heading.Controls.Add(path, 0, 1);
+        var actions = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = true, Margin = new Padding(0), Padding = new Padding(0, 6, 0, 0) };
+        var more = Theme.Button("More", (_, _) => { });
+        more.Click += (_, _) =>
+        {
+            var menu = new ContextMenuStrip();
+            menu.Items.Add("Rename / edit session…", null, (_, _) => edit.PerformClick());
+            menu.Items.Add("Remove from library", null, (_, _) => remove.PerformClick()); menu.Show(more, new Point(0, more.Height));
+        };
+        actions.Controls.AddRange([resume, copy, editor, more]); heading.Controls.Add(actions, 0, 2); main.Controls.Add(heading, 0, 1);
+        history.Dock = DockStyle.Fill; history.Margin = new Padding(0); history.EnableHeadersVisualStyles = false;
+        history.ColumnHeadersDefaultCellStyle.BackColor = Theme.Paper; history.ColumnHeadersDefaultCellStyle.ForeColor = Theme.Secondary;
+        history.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize; history.RowTemplate.Height = 48;
+        history.DefaultCellStyle.SelectionBackColor = Theme.Sage; history.DefaultCellStyle.SelectionForeColor = Theme.Ink; history.DefaultCellStyle.Padding = new Padding(5);
+        history.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal; history.GridColor = Theme.Paper;
+        history.Columns.Add("Name", "Session"); history.Columns.Add("Assistant", "Assistant"); history.Columns.Add("Source", "Source"); history.Columns.Add("Updated", "Saved");
+        history.Columns[0].FillWeight = 180; history.Columns[1].FillWeight = 70; history.Columns[2].FillWeight = 100; history.Columns[3].FillWeight = 70;
+        history.CellDoubleClick += (_, e) => { if (e.RowIndex >= 0) ShowCapture(CurrentSession); };
+        history.SelectionChanged += (_, _) => { if (!refreshing) ShowSession(); }; main.Controls.Add(history, 0, 2);
+        var details = new CheckBox { Text = "Session details", Appearance = Appearance.Button, AutoSize = true, Margin = new Padding(0, 8, 0, 0), FlatStyle = FlatStyle.Flat };
+        details.FlatAppearance.BorderSize = 0; main.Controls.Add(details, 0, 3);
+        var sessionDetails = new TabControl { Dock = DockStyle.Fill, Visible = false, Margin = new Padding(0, 4, 0, 8) };
+        var commandPage = new TabPage("Resume command"); var notePage = new TabPage("Project note");
+        command.Dock = DockStyle.Fill; note.Dock = DockStyle.Fill; command.MinimumSize = Size.Empty; note.MinimumSize = Size.Empty;
+        commandPage.Controls.Add(command); notePage.Controls.Add(note); sessionDetails.TabPages.AddRange([commandPage, notePage]); main.Controls.Add(sessionDetails, 0, 4);
+        details.CheckedChanged += (_, _) => { sessionDetails.Visible = details.Checked; detailRow.Height = details.Checked ? 150 : 0; };
+        message.Dock = DockStyle.Fill; message.AutoSize = false; message.ForeColor = Theme.Secondary; message.TextAlign = ContentAlignment.MiddleLeft;
+        message.AutoEllipsis = true; main.Controls.Add(message, 0, 5);
+        terminal.SelectedItem = NativeServices.Terminals.Contains(store.Preferences.Terminal) ? store.Preferences.Terminal : "PowerShell";
+        terminal.SelectedIndexChanged += (_, _) => Act(() => { store.Preferences.Terminal = terminal.Text; store.SavePreferences(); ShowSession(); });
+    }
+
+    private Form? settingsWindow;
+    private void ShowSettings()
+    {
+        if (settingsWindow == null)
+        {
+            settingsWindow = new Form { Text = "Reprise Settings", Icon = Icon, Font = Font, ClientSize = new Size(440, 410), FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false, StartPosition = FormStartPosition.CenterParent, BackColor = Theme.Paper };
+            var form = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(24), FlowDirection = FlowDirection.TopDown, WrapContents = false };
+            var automatic = new CheckBox { Text = "Automatically save local sessions", AutoSize = true, Checked = store.Preferences.AutoDiscovery, Margin = new Padding(0, 0, 0, 20) };
+            automatic.CheckedChanged += async (_, _) => { Act(() => { store.Preferences.AutoDiscovery = automatic.Checked; store.SavePreferences(); }); if (automatic.Checked) await Sync(); };
+            form.Controls.Add(automatic); form.Controls.Add(Theme.Label("Default terminal", 10, true)); terminal.Width = 360; form.Controls.Add(terminal);
+            form.Controls.Add(Theme.Label("Default editor", 10, true)); chooseEditor.Width = 360; chooseEditor.AutoSize = false; form.Controls.Add(chooseEditor);
+            form.Controls.Add(Theme.Label("Updates", 10, true)); form.Controls.Add(update);
+            form.Controls.Add(Theme.Button("Restore removed sessions", async (_, _) => { Act(store.RestoreRemoved); await Sync(); }));
+            form.Controls.Add(Theme.Button("Open data folder", (_, _) => NativeServices.OpenUrl(store.DataDirectory)));
+            form.Controls.Add(Theme.Label("Reprise " + NativeServices.Version + " · Saved on this PC", 9));
+            settingsWindow.Controls.Add(form);
+            settingsWindow.FormClosing += (_, e) => { if (e.CloseReason == CloseReason.UserClosing) { e.Cancel = true; settingsWindow.Hide(); } };
+        }
+        settingsWindow.Show(this); settingsWindow.Activate();
     }
     private void DrawProject(object? sender, DrawItemEventArgs e)
     {
         if (e.Index < 0 || projects.Items[e.Index] is not ProjectGroup group) return;
         var selected = (e.State & DrawItemState.Selected) != 0;
-        using var fill = new SolidBrush(selected ? Theme.Sage : Color.White); e.Graphics.FillRectangle(fill, e.Bounds);
+        using var fill = new SolidBrush(selected ? Theme.Sage : Theme.Paper); e.Graphics.FillRectangle(fill, e.Bounds);
         var bounds = Rectangle.Inflate(e.Bounds, -10, -8);
         using var bold = new Font(Font, FontStyle.Bold);
         using var small = new Font("Segoe UI", 9);
         var flags = TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix;
         TextRenderer.DrawText(e.Graphics, group.Name, bold, new Rectangle(bounds.X, bounds.Y, bounds.Width, 24), Theme.Ink, flags);
         TextRenderer.DrawText(e.Graphics, group.Directory, small, new Rectangle(bounds.X, bounds.Y + 26, bounds.Width, 20), Theme.Secondary, flags);
-        TextRenderer.DrawText(e.Graphics, $"{group.Sessions.Count} sessions · {string.Join(" / ", group.Sessions.Select(s => s.Model).Distinct())}", small, new Rectangle(bounds.X, bounds.Y + 47, bounds.Width, 20), Theme.Secondary, flags);
         e.DrawFocusRectangle();
     }
     private void RefreshProjects()
@@ -169,7 +193,6 @@ internal sealed class LibraryWindow : Form
         projects.SelectedIndex = index >= 0 ? index : projects.Items.Count > 0 ? 0 : -1;
         projects.EndUpdate(); refreshing = false;
         count.Text = $"{projects.Items.Count} {(area == "Unassigned" ? "unassigned entries" : "projects")}";
-        foreach (var button in areaButtons) button.BackColor = (string?)button.Tag == area ? Theme.Sage : Color.White;
         chooseEditor.Text = NativeServices.EditorName(store.Preferences.EditorPath ?? NativeServices.DefaultEditor());
         BindProject(); ShowStorageError();
     }
@@ -179,7 +202,7 @@ internal sealed class LibraryWindow : Form
         if (CurrentProject is { } group)
             foreach (var session in group.Sessions)
             {
-                var index = history.Rows.Add(session.DisplayName, session.Model, session.Origin, session.CreatedAt.ToLocalTime().ToString("MMM d"));
+                var index = history.Rows.Add(session.DisplayName, session.Model, session.HasLocalHistory == false ? "History not local" : session.Origin, session.CreatedAt.ToLocalTime().ToString("MMM d"));
                 history.Rows[index].Tag = session;
                 history.Rows[index].Cells[0].ToolTipText = session.DisplayName + "\n" + session.Command;
                 history.Rows[index].Cells[2].ToolTipText = session.Origin;
@@ -192,12 +215,14 @@ internal sealed class LibraryWindow : Form
     {
         var session = CurrentSession;
         foreach (var button in new[] { resume, editor, copy, edit, remove }) button.Enabled = session != null;
+        resume.Enabled = session != null && session.HasLocalHistory != false;
         title.Text = CurrentProject?.Name ?? "Your next session belongs here";
         path.Text = CurrentProject?.Directory ?? "Add a screenshot, enter a command, or sync local Codex, Claude, and Grok sessions.";
         command.Text = session?.Command ?? ""; note.Text = session?.Note ?? ""; origin.Text = session == null ? "" : $"Source: {session.Origin} · {(session.DetectedAutomatically ? "Automatically saved" : "Screenshot / manual")}";
         resume.Text = "Resume in " + terminal.Text;
         var selectedEditor = store.Preferences.EditorPath ?? NativeServices.DefaultEditor();
         editor.Text = selectedEditor == null ? "Choose editor…" : "Open in " + NativeServices.EditorName(selectedEditor);
+        if (session?.HasLocalHistory == false) message.Text = "History is not on this PC. Open this conversation in Codex, then sync.";
     }
     private void ShowCapture(Session? editing = null, string? image = null)
     {
@@ -247,7 +272,7 @@ internal sealed class LibraryWindow : Form
         {
             var result = await Task.Run(() => SessionDiscovery.Scan(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)));
             if (IsDisposed) return;
-            store.Merge(result.Sessions); RefreshProjects(); message.Text = result.Warnings.Count == 0 ? $"Saved on this PC · {store.Sessions.Count} sessions · synced {DateTime.Now:t}" : string.Join(" ", result.Warnings.Take(3)); ShowStorageError();
+            store.Merge(result.Sessions); RefreshProjects(); message.Text = result.Warnings.Count == 0 ? $"Saved on this PC · {store.Sessions.Count} sessions · synced {DateTime.Now:t}" : string.Join(" ", result.Warnings.Take(3)); ShowSession(); ShowStorageError();
         }
         catch (Exception error) { if (!IsDisposed) message.Text = "Sync could not finish: " + error.Message; }
         finally { syncing = false; if (!IsDisposed) sync.Enabled = true; }
@@ -274,9 +299,10 @@ internal sealed class LibraryWindow : Form
     private void Act(Action action) { try { action(); ShowStorageError(); } catch (Exception error) { MessageBox.Show(this, error.Message, "Reprise", MessageBoxButtons.OK, MessageBoxIcon.Error); } }
     internal void ShowLibrary() { Show(); WindowState = FormWindowState.Normal; Activate(); }
     internal string LayoutReport() => $"Window: {Size}; client: {ClientSize}; root: {Controls[0].Bounds}; heading: {title.Bounds}; directory: {path.Bounds}; history: {history.Bounds}; detail: {history.Parent?.Bounds}; detail client: {history.Parent?.ClientSize}";
+    internal Form SettingsPreview() { ShowSettings(); return settingsWindow!; }
     internal void ValidateHorizontalLayout()
     {
-        if (command.Height < 50 || note.Height < 80) throw new InvalidOperationException("Session fields collapsed during layout.");
+        if (history.Height < 160 || projects.Width < 200) throw new InvalidOperationException("Session history or project navigation collapsed during layout.");
         var client = RectangleToScreen(ClientRectangle);
         void Inspect(Control parent)
         {
@@ -302,5 +328,5 @@ internal sealed class LibraryWindow : Form
         else { timer.Stop(); tray.Visible = false; store.Save(); }
         base.OnFormClosing(e);
     }
-    protected override void Dispose(bool disposing) { if (disposing) { timer.Dispose(); tray?.Dispose(); } base.Dispose(disposing); }
+    protected override void Dispose(bool disposing) { if (disposing) { timer.Dispose(); tray?.Dispose(); settingsWindow?.Dispose(); } base.Dispose(disposing); }
 }

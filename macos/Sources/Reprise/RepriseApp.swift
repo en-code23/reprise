@@ -26,6 +26,8 @@ struct RepriseApp {
         _ = addMenu("Reprise", items: [
             ("About Reprise", "orderFrontStandardAboutPanel:", ""),
             ("", "", ""),
+            ("Settings…", "showPreferences:", ","),
+            ("", "", ""),
             ("Hide Reprise", "hide:", "h"),
             ("Show All", "unhideAllApplications:", ""),
             ("", "", ""),
@@ -56,6 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var coordinator: CaptureCoordinator?
     private var statusBarController: StatusBarController?
     private var libraryWindowController: LibraryWindowController?
+    private var settingsWindowController: SettingsWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard becomePrimaryInstance() else { return }
@@ -77,6 +80,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.store = store
         self.coordinator = coordinator
         self.libraryWindowController = library
+        self.settingsWindowController = SettingsWindowController(store: store)
         self.statusBarController = statusBar
         AppUpdater.shared.start()
         store.startDiscovery()
@@ -100,6 +104,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func showExistingLibrary(_ notification: Notification) {
         libraryWindowController?.show()
+    }
+
+    @objc func showPreferences(_ sender: Any?) {
+        settingsWindowController?.show()
     }
 
     private func becomePrimaryInstance() -> Bool {

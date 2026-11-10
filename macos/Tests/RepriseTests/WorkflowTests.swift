@@ -100,10 +100,10 @@ final class WorkflowTests: XCTestCase {
         store.add(ResumeSession(model: .codex, project: "Screenshot 2026-08-30", note: "", command: "codex resume \(UUID().uuidString)", detectedAutomatically: false))
         store.add(ResumeSession(model: .codex, project: "internal-workspace", projectDirectory: "/Users/you/.codex/chat/internal-workspace", note: "", command: "codex resume \(UUID().uuidString)", detectedAutomatically: true))
         for (name, size, appearance) in [
-            ("library-light", NSSize(width: 1180, height: 800), NSAppearance.Name.aqua),
-            ("library-dark", NSSize(width: 1180, height: 800), NSAppearance.Name.darkAqua),
-            ("library-dark-compact", NSSize(width: 1000, height: 720), NSAppearance.Name.darkAqua),
-            ("library-dark-minimum", NSSize(width: 1000, height: 640), NSAppearance.Name.darkAqua)
+            ("library-light", NSSize(width: 1040, height: 720), NSAppearance.Name.aqua),
+            ("library-dark", NSSize(width: 1040, height: 720), NSAppearance.Name.darkAqua),
+            ("library-dark-compact", NSSize(width: 940, height: 660), NSAppearance.Name.darkAqua),
+            ("library-dark-minimum", NSSize(width: 860, height: 600), NSAppearance.Name.darkAqua)
         ] {
             let view = NSHostingView(rootView: LibraryView(store: store, newCapture: {}).environment(\.locale, Locale(identifier: "en_US")))
             view.frame = NSRect(origin: .zero, size: size)
@@ -119,6 +119,17 @@ final class WorkflowTests: XCTestCase {
             try data.write(to: URL(fileURLWithPath: output).appendingPathComponent("\(name).png"))
             window.orderOut(nil)
         }
+        let settings = NSHostingView(rootView: RepriseSettingsView(store: store))
+        settings.frame = NSRect(x: 0, y: 0, width: 520, height: 520)
+        let settingsWindow = NSWindow(contentRect: settings.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+        settingsWindow.contentView = settings
+        settings.layoutSubtreeIfNeeded()
+        RunLoop.main.run(until: Date().addingTimeInterval(0.25))
+        let settingsBitmap = try XCTUnwrap(settings.bitmapImageRepForCachingDisplay(in: settings.bounds))
+        settings.cacheDisplay(in: settings.bounds, to: settingsBitmap)
+        try XCTUnwrap(settingsBitmap.representation(using: .png, properties: [:]))
+            .write(to: URL(fileURLWithPath: output).appendingPathComponent("settings.png"))
+        settingsWindow.orderOut(nil)
         let capture = CaptureCoordinator(store: store)
         for name in ["capture-idle", "capture-review"] {
             if name == "capture-review" {

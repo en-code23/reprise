@@ -7,7 +7,7 @@ namespace Reprise.Core;
 public static class SessionNames
 {
     public const int MaximumIndexBytes = 8 * 1024 * 1024;
-    public const int MaximumClaudeTailBytes = 64 * 1024;
+    public const int MaximumClaudeTailBytes = 256 * 1024;
 
     public static string? Clean(string? value)
     {
@@ -52,11 +52,12 @@ public static class SessionNames
             {
                 using var document = JsonDocument.Parse(line);
                 var root = document.RootElement;
-                if (Text(root, "type") != "custom-title" ||
-                    root.TryGetProperty("isSidechain", out var sidechain) && sidechain.ValueKind == JsonValueKind.True) continue;
-                var id = Text(root, "sessionId"); var name = Clean(Text(root, "customTitle"));
-                if (!Guid.TryParse(id, out _) || name == null) continue;
-                titles.Append('\n').Append(JsonSerializer.Serialize(new { type = "custom-title", sessionId = id, customTitle = name }));
+                if (!Guid.TryParse(Text(root, "sessionId"), out _)) continue;
+                var keys = new[] { "type", "sessionId", "cwd", "entrypoint", "isSidechain", "agentId", "customTitle", "aiTitle" };
+                var metadata = root.EnumerateObject().Where(p => keys.Contains(p.Name)).ToDictionary(p => p.Name, p => (object?)p.Value.Clone());
+                foreach (var key in new[] { "customTitle", "aiTitle" })
+                    if (Text(root, key) is { } name) metadata[key] = Clean(name);
+                titles.Append('\n').Append(JsonSerializer.Serialize(metadata));
             }
             catch (JsonException) { }
         }

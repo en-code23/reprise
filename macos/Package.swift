@@ -17,7 +17,7 @@ let package = Package(
             name: "Reprise",
             dependencies: [.product(name: "Sparkle", package: "Sparkle")],
             path: "Sources/Reprise",
-            linkerSettings: [.unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])]
+            linkerSettings: [.linkedLibrary("sqlite3"), .unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])]
         ),
         .testTarget(
             name: "RepriseTests",

@@ -51,6 +51,7 @@ struct ResumeSession: Identifiable, Codable, Hashable, Sendable {
     var name: String?
     var detectedName: String?
     var isSubagent: Bool?
+    var hasLocalHistory: Bool?
 
     init(
         id: UUID = UUID(),

@@ -62,6 +62,38 @@ var temporary = Path.Combine(Path.GetTempPath(), "RepriseCoreTests-" + Guid.NewG
 try
 {
     var store = new SessionStore(temporary);
+    var historyHome = Path.Combine(temporary, "codex-history"); Directory.CreateDirectory(historyHome);
+    var historyFile = Path.Combine(historyHome, "state_5.sqlite"); var rollout = Path.Combine(historyHome, "old.jsonl");
+    using (var db = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=" + historyFile))
+    {
+        db.Open(); using var sql = db.CreateCommand();
+        sql.CommandText = "CREATE TABLE threads(id TEXT,cwd TEXT,rollout_path TEXT,title TEXT,source TEXT,originator TEXT,updated_at INTEGER,has_user_event INTEGER);";
+        sql.ExecuteNonQuery();
+        sql.CommandText = "INSERT INTO threads VALUES($id,$cwd,$rollout,'Older conversation','cli','codex-tui',1700000000,0)";
+        sql.Parameters.AddWithValue("$id", identifier); sql.Parameters.AddWithValue("$cwd", @"C:\Projects\older"); sql.Parameters.AddWithValue("$rollout", rollout); sql.ExecuteNonQuery();
+    }
+    var historyBytes = File.ReadAllBytes(historyFile);
+    var indexed = CodexHistoryIndex.Scan(historyHome);
+    Check(indexed.Warnings.Count == 0 && indexed.Sessions.Count == 1, "Older zero-user-event Codex metadata must be imported");
+    var oldSession = indexed.Sessions.Single();
+    Check(oldSession.HasLocalHistory == false && oldSession.DisplayName == "Older conversation" && oldSession.DetectedOrigin == "CLI", "Indexed history must expose availability, title, and source");
+    Check(File.ReadAllBytes(historyFile).SequenceEqual(historyBytes), "Discovery must not write to the Codex database");
+    try { Commands.PowerShellScript(oldSession); throw new Exception("Missing history launched"); } catch (InvalidOperationException) { passed++; }
+    File.WriteAllText(rollout, "");
+    Check(CodexHistoryIndex.Scan(historyHome).Sessions.Single().HasLocalHistory == true, "Restored transcripts must become available");
+    var queueFile = Path.Combine(temporary, "older-claude.jsonl");
+    var queue = JsonSerializer.Serialize(new { type = "queue-operation", sessionId = identifier, content = new string('x', 520000) });
+    var metadata = JsonSerializer.Serialize(new { type = "user", sessionId = identifier, cwd = @"C:\Projects\older", entrypoint = "cli", message = new { content = "Never retain private text" } });
+    var aiTitle = JsonSerializer.Serialize(new { type = "ai-title", sessionId = identifier, aiTitle = "Automatic title" });
+    File.WriteAllText(queueFile, queue + "\n" + metadata + "\n" + title + "\n" + aiTitle);
+    using (var stream = File.OpenRead(queueFile))
+    {
+        var header = new byte[256 * 1024]; stream.ReadExactly(header);
+        var tail = SessionNames.ClaudeTitleTail(stream);
+        var recovered = SessionDiscovery.Parse(System.Text.Encoding.UTF8.GetString(header) + tail, "claude", DateTimeOffset.UtcNow);
+        Check(recovered?.ProjectDirectory == @"C:\Projects\older" && recovered.DetectedName == "Checkout retries", "Older Claude metadata after a large queue must retain custom title precedence");
+        Check(tail.Length < 2048 && !tail.Contains("Never retain private text"), "Claude tail must contain metadata only");
+    }
     store.Merge([session, session]); Check(store.Sessions.Count == 1, "Imports duplicated");
     store.Upsert(store.Sessions[0] with { Note = "Keep my edits", OriginOverride = "IDE extension" });
     store.Merge([session]); Check(store.Sessions[0].Note == "Keep my edits" && store.Sessions[0].Origin == "IDE extension", "Sync overwrote edits");

@@ -1,4 +1,4 @@
-param([string]$Version = "1.7.1", [switch]$TestInstaller)
+param([string]$Version = "1.8.0", [switch]$TestInstaller)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $publish = Join-Path $root 'build/windows/publish'
@@ -36,6 +36,8 @@ Invoke-WebRequest 'https://raw.githubusercontent.com/velopack/velopack/1.2.161/L
 Invoke-WebRequest 'https://raw.githubusercontent.com/charlesw/tesseract/master/LICENSE.txt' -OutFile "$licenses/Tesseract.NET-LICENSE.txt"
 Invoke-WebRequest 'https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/87416418657359cb625c412a48b6e1d6d41c29bd/LICENSE' -OutFile "$licenses/Tesseract-model-LICENSE.txt"
 Invoke-WebRequest 'https://raw.githubusercontent.com/DanBloomberg/leptonica/master/leptonica-license.txt' -OutFile "$licenses/Leptonica-LICENSE.txt"
+Invoke-WebRequest 'https://raw.githubusercontent.com/dotnet/efcore/main/LICENSE.txt' -OutFile "$licenses/Microsoft.Data.Sqlite-LICENSE.txt"
+Invoke-WebRequest 'https://raw.githubusercontent.com/ericsink/SQLitePCL.raw/master/LICENSE.TXT' -OutFile "$licenses/SQLitePCLRaw-LICENSE.txt"
 Invoke-WebRequest 'https://visualstudio.microsoft.com/license-terms/vs2022-cruntime/' -OutFile "$licenses/Visual-C-Runtime-LICENSE.html"
 
 $smoke = Start-Process "$publish/Reprise.exe" -ArgumentList @('--smoke-test', "`"$qa`"") -PassThru

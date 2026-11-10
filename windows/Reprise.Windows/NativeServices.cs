@@ -10,7 +10,7 @@ namespace Reprise.Windows;
 
 internal static class NativeServices
 {
-    internal static string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.7.1";
+    internal static string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.8.0";
     internal static readonly string[] Terminals = ["Windows Terminal", "PowerShell", "Command Prompt"];
     internal static readonly string[] Origins = ["Unknown", "Desktop app", "CLI", "IDE extension", "SDK / automation", "Multiple clients"];
     internal static Icon LoadIcon()
@@ -39,6 +39,7 @@ internal static class NativeServices
     }
     internal static void Resume(Session session, string terminal)
     {
+        if (session.HasLocalHistory == false) throw new InvalidOperationException("This conversation’s history is not on this PC. Open it in Codex first, then sync Reprise.");
         var directory = RequireDirectory(session);
         var arguments = Commands.ValidatedArguments(session.Command);
         var executable = FindExecutable(arguments[0] + ".exe") ?? FindExecutable(arguments[0] + ".cmd")
@@ -55,7 +56,7 @@ internal static class NativeServices
             var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(Commands.PowerShellScript(session, executable)));
             if (terminal == "Windows Terminal")
             {
-                info = new(FindExecutable("wt.exe") ?? throw new InvalidOperationException("Windows Terminal was not found. Install it or choose PowerShell in the sidebar."));
+                info = new(FindExecutable("wt.exe") ?? throw new InvalidOperationException("Windows Terminal was not found. Install it or choose PowerShell in Settings."));
                 foreach (var argument in new[] { "-w", "new", "new-tab", shell, "-NoExit", "-EncodedCommand", encoded }) info.ArgumentList.Add(argument);
             }
             else
@@ -71,7 +72,7 @@ internal static class NativeServices
     internal static void OpenEditor(Session session, string? editor)
     {
         var directory = RequireDirectory(session);
-        if (editor == null || !File.Exists(editor)) throw new InvalidOperationException("Choose an installed editor executable (.exe) in the sidebar first.");
+        if (editor == null || !File.Exists(editor)) throw new InvalidOperationException("Choose an installed editor executable (.exe) in Settings first.");
         var start = new ProcessStartInfo(editor) { UseShellExecute = false, WorkingDirectory = directory };
         start.ArgumentList.Add(directory);
         using var process = Process.Start(start) ?? throw new InvalidOperationException("The editor could not be started.");

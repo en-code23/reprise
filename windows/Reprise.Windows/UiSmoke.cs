@@ -25,6 +25,13 @@ internal static class UiSmoke
                 window.ValidateHorizontalLayout();
                 using var image = new Bitmap(window.Width, window.Height); window.DrawToBitmap(image, new Rectangle(Point.Empty, window.Size));
                 image.Save(Path.Combine(output, "windows-library.png"), ImageFormat.Png);
+                window.Size = window.MinimumSize;
+                Application.DoEvents(); window.ValidateHorizontalLayout();
+                using var compact = new Bitmap(window.Width, window.Height); window.DrawToBitmap(compact, new Rectangle(Point.Empty, window.Size));
+                compact.Save(Path.Combine(output, "windows-library-minimum.png"), ImageFormat.Png);
+                var settings = window.SettingsPreview(); Application.DoEvents();
+                using var settingsImage = new Bitmap(settings.Width, settings.Height); settings.DrawToBitmap(settingsImage, new Rectangle(Point.Empty, settings.Size));
+                settingsImage.Save(Path.Combine(output, "windows-settings.png"), ImageFormat.Png); settings.Hide();
                 window.Hide();
             }
             using (var capture = new CaptureWindow(store.Sessions[0]))

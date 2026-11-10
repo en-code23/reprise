@@ -10,6 +10,7 @@ public sealed record Session
     public string? Name { get; set; }
     public string? DetectedName { get; set; }
     public bool? IsSubagent { get; set; }
+    public bool? HasLocalHistory { get; set; }
     public string? ProjectDirectory { get; set; }
     public string Note { get; set; } = "";
     public string Command { get; set; } = "";
@@ -65,6 +66,7 @@ public static class Commands
     public static string PowerShellLiteral(string value) => "'" + value.Replace("'", "''") + "'";
     public static string PowerShellScript(Session session, string? executable = null)
     {
+        if (session.HasLocalHistory == false) throw new InvalidOperationException("This conversation’s history is not on this PC. Open it in Codex first, then sync Reprise.");
         if (string.IsNullOrWhiteSpace(session.ProjectDirectory)) throw new InvalidOperationException("Choose a project folder first.");
         var arguments = ValidatedArguments(session.Command);
         return "$ErrorActionPreference = 'Stop'; Set-Location -LiteralPath " + PowerShellLiteral(session.ProjectDirectory) +

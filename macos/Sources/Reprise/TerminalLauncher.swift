@@ -1,12 +1,13 @@
 import AppKit
 
 enum TerminalLaunchError: LocalizedError {
-    case missingDirectory, invalidDirectory, invalidCommand, automation(String), notInstalled(String), oldGhostty
+    case missingDirectory, invalidDirectory, invalidCommand, missingHistory, automation(String), notInstalled(String), oldGhostty
     var errorDescription: String? {
         switch self {
         case .missingDirectory: "Choose a project directory before resuming."
         case .invalidDirectory: "The project folder no longer exists. Choose its new location."
         case .invalidCommand: "Use a resume command with a single session ID. Shell scripts cannot be launched from Reprise."
+        case .missingHistory: "This conversation’s history is not on this Mac. Open it in Codex first, then sync Reprise."
         case .automation(let message): "\(message) Check System Settings → Privacy & Security → Automation and allow Reprise to control your selected terminal. For Ghostty, AppleScript must also be enabled in its configuration."
         case .notInstalled(let name): "\(name) is not installed. Install it or choose another app under Default terminal."
         case .oldGhostty: "Ghostty 1.3 or newer is required to resume sessions. Update Ghostty or choose another default terminal."
@@ -18,6 +19,7 @@ enum TerminalCommand {
     static func quote(_ value: String) -> String { "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'" }
 
     static func build(for session: ResumeSession) throws -> String {
+        guard session.hasLocalHistory != false else { throw TerminalLaunchError.missingHistory }
         guard let directory = session.projectDirectory, !directory.isEmpty else { throw TerminalLaunchError.missingDirectory }
         let path = (directory as NSString).expandingTildeInPath
         guard path.hasPrefix("/") else { throw TerminalLaunchError.invalidDirectory }

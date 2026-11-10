@@ -7,5 +7,10 @@ Tesseract .NET wrapper (Apache-2.0): https://github.com/charlesw/tesseract
 Tesseract OCR and English language data (Apache-2.0): https://github.com/tesseract-ocr/tesseract
 Leptonica (BSD-2-Clause): https://github.com/DanBloomberg/leptonica
 
+Microsoft.Data.Sqlite (MIT): https://github.com/dotnet/efcore
+Copyright (c) .NET Foundation and Contributors.
+SQLitePCLRaw (Apache-2.0): https://github.com/ericsink/SQLitePCL.raw
+SQLite (public domain): https://www.sqlite.org/copyright.html
+
 Complete license texts are included in the installed licenses directory by the release build.
 No screenshots or conversation contents are uploaded by Reprise.

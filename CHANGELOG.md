@@ -1,5 +1,15 @@
 # Release notes
 
+## 1.8.0
+
+- Replace the three-column library with a native project list and full session history. Move preferences into a separate Settings window, keep Resume, Copy, and Open in editor together, and collapse technical details by default.
+- Read older and archived Codex history, including metadata from the local read-only history index. Keep conversations with missing transcripts as named references, clearly mark History not local, and disable terminal launch until their history is available.
+- Recover older Claude sessions whose directory metadata follows a large queued-input record. Read bounded, metadata-only tails and respect custom titles over generated titles.
+- Restrict library search to folder names on Mac and Windows. Ignore commands, session titles, notes, and parent paths while preserving a matching project's complete history.
+- Default to Main sessions, keeping SDK/automation available through All sources or its dedicated source filter.
+- Filter confirmed Codex and Claude subagents, legacy agent files, and nested subagent folders. Preserve saved records and give primary transcripts precedence over matching child records.
+- Repair folderless screenshot/manual entries when local metadata identifies their project. Preserve entry IDs, custom names, notes, and explicitly chosen folders.
+
 ## 1.7.0
 
 - Add editable, searchable session names on Mac and Windows, separate from project names and resume commands. Name sessions during capture or rename them from the library.

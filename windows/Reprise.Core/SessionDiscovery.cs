@@ -12,11 +12,14 @@ public static class SessionDiscovery
         string Root(string key, string fallback) => (environment?.GetValueOrDefault(key) ?? Environment.GetEnvironmentVariable(key)) is { Length: > 0 } value ? value : Path.Combine(home, fallback);
         var sessions = new List<Session>(); var warnings = new HashSet<string>();
         var codexHome = Root("CODEX_HOME", ".codex");
+        var indexed = CodexHistoryIndex.Scan(codexHome);
+        sessions.AddRange(indexed.Sessions); warnings.UnionWith(indexed.Warnings);
         var names = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         try { names = SessionNames.ReadCodexIndex(Path.Combine(codexHome, "session_index.jsonl")); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { warnings.Add("Some Codex session names could not be read."); }
         foreach (var (model, root, pattern, limit) in new[] {
             ("codex", Path.Combine(codexHome, "sessions"), "*.jsonl", 256 * 1024),
+            ("codex", Path.Combine(codexHome, "archived_sessions"), "*.jsonl", 256 * 1024),
             ("claude", Path.Combine(Root("CLAUDE_CONFIG_DIR", ".claude"), "projects"), "*.jsonl", 256 * 1024),
             ("grok", Path.Combine(Root("GROK_HOME", ".grok"), "sessions"), "summary.json", 1024 * 1024) })
         {
@@ -47,8 +50,11 @@ public static class SessionDiscovery
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { warnings.Add($"The {model} metadata folder could not be read."); }
         }
-        return new(sessions.GroupBy(s => s.Identity, StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.OrderBy(s => s.IsSubagent == true ? 1 : 0).ThenByDescending(s => s.CreatedAt).First()).ToList(), warnings.ToList());
+        var unique = sessions.GroupBy(s => s.Identity, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.OrderBy(s => s.IsSubagent == true ? 1 : 0).ThenBy(s => s.HasLocalHistory == true ? 0 : 1).ThenByDescending(s => s.CreatedAt).First()).ToList();
+        foreach (var session in unique.Where(s => s.Model == "codex"))
+            session.DetectedName = names.GetValueOrDefault(session.SessionIdentifier) ?? indexed.Sessions.FirstOrDefault(s => s.Identity.Equals(session.Identity, StringComparison.OrdinalIgnoreCase))?.DetectedName ?? session.DetectedName;
+        return new(unique, warnings.ToList());
     }
     private static string? Text(JsonElement element, string key) => element.ValueKind == JsonValueKind.Object && element.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
     public static Session? Parse(string data, string model, DateTimeOffset modified, bool includeSubagents = false)
@@ -56,6 +62,7 @@ public static class SessionDiscovery
         string? id = null, directory = null; var origin = "Unknown"; var entrypoints = new HashSet<string>();
         string? detectedName = null;
         var names = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var automaticNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var isSubagent = false; var classifiedClaudeConversation = false;
         if (model == "grok")
         {
@@ -95,6 +102,7 @@ public static class SessionDiscovery
                     id = candidate ?? id; directory = Text(root, "cwd") ?? directory;
                     if (Text(root, "entrypoint") is { } entrypoint) entrypoints.Add(entrypoint);
                     if (Text(root, "type") == "custom-title" && candidate != null && SessionNames.Clean(Text(root, "customTitle")) is { } name) names[candidate] = name;
+                    if (Text(root, "type") == "ai-title" && candidate != null && SessionNames.Clean(Text(root, "aiTitle")) is { } aiName) automaticNames[candidate] = aiName;
                 }
             }
             catch (JsonException) { }
@@ -103,10 +111,10 @@ public static class SessionDiscovery
         {
             var sources = entrypoints.Select(ClaudeOrigin).Where(s => s != "Unknown").Distinct().ToList();
             origin = sources.Count > 1 ? "Multiple clients" : sources.FirstOrDefault() ?? "Unknown";
-            if (id != null) detectedName = names.GetValueOrDefault(id);
+            if (id != null) detectedName = names.GetValueOrDefault(id) ?? automaticNames.GetValueOrDefault(id);
         }
         if (isSubagent && !includeSubagents || !Guid.TryParse(id, out _) || !ProjectPaths.IsWindowsAbsolute(directory)) return null;
-        return new Session { Model = model, Project = ProjectPaths.Name(directory), ProjectDirectory = directory, Command = Commands.Build(model, id!), CreatedAt = modified, DetectedAutomatically = true, DetectedOrigin = origin, DetectedName = detectedName, IsSubagent = isSubagent };
+        return new Session { Model = model, Project = ProjectPaths.Name(directory), ProjectDirectory = directory, Command = Commands.Build(model, id!), CreatedAt = modified, DetectedAutomatically = true, DetectedOrigin = origin, DetectedName = detectedName, IsSubagent = isSubagent, HasLocalHistory = true };
     }
     private static string Normalize(string? value) => (value ?? "").Trim().ToLowerInvariant().Replace('_', '-');
     public static string CodexOrigin(string? originator, string? source) => Normalize(originator) switch {

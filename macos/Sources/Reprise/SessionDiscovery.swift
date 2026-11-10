@@ -7,9 +7,9 @@ struct DiscoveryResult: Sendable {
 
 /// Only metadata is retained. Conversation messages and tool output are never imported.
 enum SessionDiscovery {
-    static func scan(home: URL = FileManager.default.homeDirectoryForCurrentUser) -> DiscoveryResult {
+    static func scan(home: URL = FileManager.default.homeDirectoryForCurrentUser,
+                     environment: [String: String] = ProcessInfo.processInfo.environment) -> DiscoveryResult {
         var result = DiscoveryResult()
-        let environment = ProcessInfo.processInfo.environment
         let codex = environment["CODEX_HOME"].map { URL(fileURLWithPath: $0) }
             ?? home.appendingPathComponent(".codex")
         let claude = environment["CLAUDE_CONFIG_DIR"].map { URL(fileURLWithPath: $0) }
@@ -17,7 +17,11 @@ enum SessionDiscovery {
         var codexNames: [String: String] = [:]
         do { codexNames = try SessionNameMetadata.codexNames(at: codex.appendingPathComponent("session_index.jsonl")) }
         catch { result.warnings.append("Some Codex session names could not be read.") }
+        let indexed = CodexHistoryIndex.scan(home: codex)
+        result.sessions.append(contentsOf: indexed.sessions)
+        result.warnings.append(contentsOf: indexed.warnings)
         for (root, model) in [(codex.appendingPathComponent("sessions"), AssistantModel.codex),
+                              (codex.appendingPathComponent("archived_sessions"), AssistantModel.codex),
                               (claude.appendingPathComponent("projects"), AssistantModel.claude)] {
             guard FileManager.default.fileExists(atPath: root.path) else { continue }
             guard let enumerator = FileManager.default.enumerator(
@@ -56,7 +60,15 @@ enum SessionDiscovery {
         result.sessions.append(contentsOf: grok.sessions)
         // An embedded child record must never hide a matching primary transcript.
         result.sessions = Dictionary(grouping: result.sessions, by: \.identityKey).values.compactMap { records in
-            records.filter { $0.isSubagent != true }.max { $0.createdAt < $1.createdAt } ?? records.max { $0.createdAt < $1.createdAt }
+            let primary = records.filter { $0.isSubagent != true }
+            let candidates = primary.isEmpty ? records : primary
+            return candidates.filter { $0.hasLocalHistory == true }.max { $0.createdAt < $1.createdAt } ?? candidates.max { $0.createdAt < $1.createdAt }
+        }
+        for index in result.sessions.indices where result.sessions[index].model == .codex {
+            let id = result.sessions[index].sessionIdentifier.lowercased()
+            if let name = codexNames[id] ?? indexed.sessions.first(where: { $0.sessionIdentifier.lowercased() == id })?.detectedName {
+                result.sessions[index].detectedName = name
+            }
         }
         result.warnings.append(contentsOf: grok.warnings)
         result.warnings = Array(Set(result.warnings)).sorted()
@@ -69,6 +81,7 @@ enum SessionDiscovery {
         var detection = OriginDetection(origin: .unknown, evidence: [])
         var entrypoints = Set<String>()
         var names: [String: String] = [:]
+        var automaticNames: [String: String] = [:]
         var isSubagent = false
         var classifiedClaudeConversation = false
         for line in data.split(separator: 0x0A) {
@@ -98,6 +111,9 @@ enum SessionDiscovery {
                 if object["type"] as? String == "custom-title", let id = object["sessionId"] as? String {
                     names[id.lowercased()] = SessionName.clean(object["customTitle"] as? String)
                 }
+                if object["type"] as? String == "ai-title", let id = object["sessionId"] as? String {
+                    automaticNames[id.lowercased()] = SessionName.clean(object["aiTitle"] as? String)
+                }
             }
         }
         if model == .claude { detection = SessionOriginDetector.claude(entrypoints: entrypoints) }
@@ -113,8 +129,9 @@ enum SessionDiscovery {
         session.discoveryKey = "\(model.rawValue):\(command)"
         session.detectedOrigin = detection.origin
         session.sourceEvidence = detection.evidence
-        session.detectedName = names[identifier.lowercased()]
+        session.detectedName = names[identifier.lowercased()] ?? automaticNames[identifier.lowercased()]
         session.isSubagent = isSubagent
+        session.hasLocalHistory = true
         return session
     }
 }

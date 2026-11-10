@@ -65,7 +65,8 @@ public sealed class SessionStore
         if (index >= 0) Sessions[index] = session with { Id = Sessions[index].Id,
             Name = session.Id == Sessions[index].Id ? session.Name : session.Name ?? Sessions[index].Name,
             DetectedName = session.DetectedName ?? Sessions[index].DetectedName,
-            IsSubagent = session.IsSubagent ?? Sessions[index].IsSubagent };
+            IsSubagent = session.IsSubagent ?? Sessions[index].IsSubagent,
+            HasLocalHistory = session.HasLocalHistory ?? Sessions[index].HasLocalHistory };
         else Sessions.Add(session);
         Preferences.Dismissed.Remove(session.Identity);
         Save(); SavePreferences();
@@ -88,6 +89,7 @@ public sealed class SessionStore
                 previous.CreatedAt = session.CreatedAt;
                 previous.DetectedOrigin = session.DetectedOrigin;
                 if (session.IsSubagent is { } isSubagent) previous.IsSubagent = isSubagent;
+                if (session.HasLocalHistory is { } available) previous.HasLocalHistory = available;
                 if (SessionNames.Clean(session.DetectedName) is { } name) previous.DetectedName = name;
             }
         }
