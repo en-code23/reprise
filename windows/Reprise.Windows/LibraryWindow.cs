@@ -12,6 +12,7 @@ internal sealed class LibraryWindow : Form
     private readonly ComboBox model = Theme.Combo(["All assistants", "codex", "claude", "grok", "other"]);
     private readonly ComboBox source = Theme.Combo(["Main sessions", "All sources", .. NativeServices.Origins]);
     private readonly ComboBox terminal = Theme.Combo(NativeServices.Terminals);
+    private readonly ComboBox libraryArea = Theme.Combo(["Projects", "Unassigned", "Internal"]);
     private readonly TextBox search = new() { PlaceholderText = "Search folder names", AccessibleName = "Search folder names", Dock = DockStyle.Fill };
     private readonly Label title = Theme.Label("Your next session belongs here", 22, true), path = Theme.Label("Add a screenshot, enter a command, or sync local sessions."), message = Theme.Label("Saved on this PC", 9);
     private readonly TextBox command = new() { AutoSize = false, ReadOnly = true, Multiline = true, WordWrap = true, MinimumSize = new Size(0, 65), Height = 65, Font = new Font("Consolas", 10), BorderStyle = BorderStyle.FixedSingle };
@@ -70,9 +71,9 @@ internal sealed class LibraryWindow : Form
         sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 44)); sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
         sidebar.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
         root.Panel1.Controls.Add(sidebar);
-        var library = Theme.Combo(["Projects", "Unassigned", "Internal"]); library.Dock = DockStyle.Fill;
-        library.SelectedIndexChanged += (_, _) => { area = library.Text; RefreshProjects(); };
-        sidebar.Controls.Add(library, 0, 0);
+        libraryArea.Dock = DockStyle.Fill;
+        libraryArea.SelectedIndexChanged += (_, _) => { if (!refreshing) { area = libraryArea.Text; RefreshProjects(); } };
+        sidebar.Controls.Add(libraryArea, 0, 0);
         search.Margin = new Padding(0, 4, 0, 8); search.TextChanged += (_, _) => RefreshProjects(); sidebar.Controls.Add(search, 0, 1);
         projects.BackColor = Theme.Paper; projects.ItemHeight = 66; projects.Margin = new Padding(0);
         projects.DrawItem += DrawProject; projects.SelectedIndexChanged += (_, _) => { if (!refreshing) BindProject(); };
@@ -196,6 +197,7 @@ internal sealed class LibraryWindow : Form
     {
         var previous = CurrentProject?.Key;
         refreshing = true;
+        libraryArea.SelectedItem = area;
         projects.BeginUpdate(); projects.Items.Clear();
         foreach (var group in ProjectGroup.Group(store.Sessions, area, model.Text, source.Text, search.Text)) projects.Items.Add(group);
         var index = Enumerable.Range(0, projects.Items.Count).FirstOrDefault(i => ((ProjectGroup)projects.Items[i]).Key == previous, -1);
