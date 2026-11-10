@@ -64,7 +64,7 @@ try
     var store = new SessionStore(temporary);
     var historyHome = Path.Combine(temporary, "codex-history"); Directory.CreateDirectory(historyHome);
     var historyFile = Path.Combine(historyHome, "state_5.sqlite"); var rollout = Path.Combine(historyHome, "old.jsonl");
-    using (var db = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=" + historyFile))
+    using (var db = new Microsoft.Data.Sqlite.SqliteConnection(new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder { DataSource = historyFile, Pooling = false }.ToString()))
     {
         db.Open(); using var sql = db.CreateCommand();
         sql.CommandText = "CREATE TABLE threads(id TEXT,cwd TEXT,rollout_path TEXT,title TEXT,source TEXT,originator TEXT,updated_at INTEGER,has_user_event INTEGER);";
