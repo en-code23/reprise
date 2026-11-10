@@ -37,11 +37,11 @@ let previewPlatform = systemPlatform;
 let previewDark = false;
 function renderPreview() {
   const windows = previewPlatform === "windows";
-  const path = (windows ? "assets/windows-library.png" : previewDark ? "assets/library-dark.png" : "assets/library-light.png") + "?v=1.7.0";
+  const path = (windows ? "assets/windows-library.png" : previewDark ? "assets/library-dark.png" : "assets/library-light.png") + "?v=1.8.0";
   const preview = document.getElementById("app-preview");
   preview.src = path;
   preview.alt = windows ? "Native Reprise Windows project library with example sessions." : "Native Reprise Mac project library with example sessions.";
-  preview.style.aspectRatio = windows ? "1044 / 788" : "1180 / 800";
+  preview.style.aspectRatio = "auto";
   document.getElementById("full-preview").href = path;
   document.getElementById("preview-window-bar").hidden = windows;
   document.querySelector(".appearance").hidden = windows;

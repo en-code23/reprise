@@ -27,24 +27,24 @@ Windows sessions and preferences live in `%LOCALAPPDATA%\RepriseLibrary`, outsid
 Build on Windows with .NET 10 and the Visual Studio C++ redistributable files available:
 
 ```powershell
-./scripts/build-windows.ps1 -Version 1.7.0
+./scripts/build-windows.ps1 -Version 1.8.0
 ```
 
 The script runs core checks, publishes a self-contained app, verifies its UI/OCR on Windows, and builds the installer and update packages with pinned Velopack tooling. `-TestInstaller` additionally installs and tests the package on a clean CI runner. Windows previews are saved under `build/windows/qa/`. Run the portable core checks on any .NET 10 host with `dotnet run --project windows/Reprise.Core.Tests -c Release`.
 
 ## Session names on Mac and Windows
 
-Select a project, then choose a session by name. On Mac, click **Rename** beside the selected session's name, or right-click its history row. On Windows, use **Rename / edit** or double-click the session row. A Session name field is also available when adding a screenshot or entering a command.
+Select a project, then choose a session by name. On Mac, use the selected session’s **… → Rename session** menu or right-click its history row. On Windows, use **… → Rename / edit session** or double-click the row. A Session name field is also available when adding a screenshot or entering a command.
 
-Saved names are imported from Codex's `session_index.jsonl`, Claude's `custom-title` rename records, and Grok's `generated_title` metadata. You can give any session your own name in Reprise. Your name survives sync and restart; clear the field to use the latest imported name again. Entries without a name show a short session-ID fallback. Names are searchable, and changing one leaves the project grouping and resume command intact. Reprise does not write names back to the original CLI files.
+Saved names are imported from Codex's `session_index.jsonl`, Claude's `custom-title` and `ai-title` records, and Grok's `generated_title` metadata. You can give any session your own name in Reprise. Your name survives sync and restart; clear the field to use the latest imported name again. Entries without a name show a short session-ID fallback. Names identify conversations in project history; the library search matches only the project's folder name. Renaming leaves project grouping and resume commands intact. Reprise does not write names back to the original CLI files.
 
-The Codex index read is limited to its most recent 8 MB. Claude name discovery additionally reads up to 64 KB from the end of a transcript, retaining only explicit rename records. Names outside these bounds may need to be entered manually. Names are normalized to one line and limited to 200 characters.
+The Codex index read is limited to its most recent 8 MB. Claude discovery additionally reads up to 256 KB from the end of a transcript, retaining only directory, source, session ID, and title metadata. This also recovers older files with large queued-input headers. Custom titles take precedence over generated titles. Names outside these bounds may need to be entered manually. Names are normalized to one line and limited to 200 characters.
 
 The remaining sections describe the Mac app unless stated otherwise.
 
 ## Resume your work
 
-The library opens when Reprise starts. Select a session to see the full command, folder, and notes. Choose **Default terminal** in the library sidebar or menubar menu: Apple Terminal, Ghostty, or iTerm2. The choice is saved and the Resume button shows the selected app. It opens a new window, changes to the project directory, and starts the appropriate CLI. Choose a new folder if the project has moved. The installed CLI must be available in your shell and signed in.
+The library opens when Reprise starts. Choose a folder on the left and a conversation on the right. Resume, copy, or open in your editor from the project header. Expand **Session details** for the command and notes. Choose **Default terminal** in **Reprise → Settings** (⌘,) or the menubar menu: Apple Terminal, Ghostty, or iTerm2. The choice is saved and the Resume button shows the selected app. It opens a new window, changes to the project directory, and starts the appropriate CLI. Choose a new folder if the project has moved. The installed CLI must be available in your shell and signed in.
 
 Reprise appears in both the Mac Dock and menu bar. Clicking its Dock icon opens the library, including when the window is closed or minimized. Closing the library keeps Reprise and automatic discovery running; use Reprise → Quit Reprise or the menu bar's Quit action to exit.
 
@@ -52,13 +52,19 @@ Reprise keeps one running instance per macOS user, including when you open a sec
 
 The library shows one row per project directory, with sessions from different assistants together. Selecting a project chooses its latest session; use its history to resume an earlier conversation. Project names alone are never used for grouping, so two folders with the same name stay separate.
 
+Search matches only the folder's final name, ignoring case and surrounding spaces. Commands, notes, session names, source labels, and parent paths do not affect the results. All sessions for a matching folder remain together.
+
+When local discovery finds a session previously saved from a screenshot without a folder, it fills the missing directory and moves the entry into its project. The same entry ID, session name, and notes are preserved. Placeholder screenshot labels are replaced with the folder name; explicitly chosen folders and project labels stay intact.
+
 ### Desktop app versus CLI
 
-Each session shows its recorded source: **Desktop app**, **CLI**, **IDE extension**, **SDK / automation**, **Multiple clients**, or **Unknown**. Combine an assistant filter with the **All sources** menu to show, for example, Codex desktop sessions or Claude CLI sessions without splitting the project library into duplicate rows.
+Each session shows its recorded source: **Desktop app**, **CLI**, **IDE extension**, **SDK / automation**, **Multiple clients**, or **Unknown**. The default **Main sessions** source filter hides SDK/automation entries. Choose **All sources** to include automation, or **SDK / automation** to view it separately. Open **Filter** to combine a source with an assistant to show Codex desktop sessions or Claude CLI sessions without splitting projects into duplicate rows.
 
-Codex detection uses specific `originator` markers, preferring them over the broad `source` value (Desktop can also report `vscode`). Claude detection uses top-level `entrypoint` metadata such as `cli`, `claude-desktop`, `sdk-cli`, and `sdk-py`. Multiple recognised entrypoints in the scanned portion are labelled Multiple clients. Source detection uses only the first 256 KB of a file; it cannot reliably identify every client used throughout the whole conversation.
+Confirmed subagents are excluded from the library and menu bar recents, including Codex subagent metadata, Claude sidechain conversations, legacy `agent-` files, and nested subagent folders. Previously imported records recognized as subagents remain stored with their notes and names; they are filtered out rather than deleted. A primary transcript takes precedence if the same session ID also appears in a child record.
 
-Records without enough evidence stay Unknown. Use **Session details → Session source** to correct a label or select Automatic to return to metadata detection. The same selector is available during screenshot/manual capture review. On the next sync, old records gain metadata labels without losing your edits or overrides.
+Codex detection uses specific `originator` markers, preferring them over the broad `source` value (Desktop can also report `vscode`). Claude detection uses top-level `entrypoint` metadata such as `cli`, `claude-desktop`, `sdk-cli`, and `sdk-py`. Multiple recognised entrypoints in the scanned portion are labelled Multiple clients. Source detection uses bounded header/tail metadata or the local Codex index; it cannot reliably identify every client used throughout the whole conversation.
+
+Records without enough evidence stay Unknown. Use **… → Edit details → Session source** to correct a label or select Automatic to return to metadata detection. The same selector is available during screenshot/manual capture review. On the next sync, old records gain metadata labels without losing your edits or overrides.
 
 These are recorded origins for **local coding sessions**, not a live connection indicator. Regular cloud-only Claude chats are not discovered. The source label does not change how Resume works: it still uses your chosen terminal and the saved resume command.
 
@@ -68,11 +74,11 @@ macOS may ask to allow Reprise to control your selected terminal on first use. P
 
 ## Open in your editor
 
-Choose **Default editor** in the library sidebar. Installed editors appear in the menu; use **Choose another editor…** to select any other editor application. The choice is saved. Click **Open in VS Code** (or your selected editor) to open the session's project folder and copy its resume command. Paste it into the editor's terminal to continue that conversation. Reprise opens the folder through macOS, so an editor command-line launcher is not required. It copies the command only after the project opens successfully; it does not run it or change editor configuration.
+Choose **Default editor** in **Settings**. Installed editors appear in the menu; use **Choose another editor…** to select any other editor application. The choice is saved. Click **Open in VS Code** (or your selected editor) to open the session's project folder and copy its resume command. Paste it into the editor's terminal to continue that conversation. Reprise opens the folder through macOS, so an editor command-line launcher is not required. It copies the command only after the project opens successfully; it does not run it or change editor configuration.
 
 ## In-app updates
 
-Use **Check for updates** at the bottom of the library or in the menubar options. Sparkle shows available updates and downloads, verifies, installs, and relaunches them inside Reprise. Checks are initiated by you. Both the feed and archives are signed with Ed25519; the public key is embedded in the app. Install v1.5.0 once using the DMG to gain this feature in older versions.
+Use **Settings → Check for updates** or the menubar options. Sparkle shows available updates and downloads, verifies, installs, and relaunches them inside Reprise. Checks are initiated by you. Both the feed and archives are signed with Ed25519; the public key is embedded in the app. Install v1.5.0 once using the DMG to gain this feature in older versions.
 
 Update checks contact GitHub. Saved sessions, commands, screenshots, and project notes are not sent with them.
 
@@ -80,9 +86,11 @@ The release workflow requires the repository secret `SPARKLE_PRIVATE_KEY`. Keep 
 
 ## Automatic local discovery
 
-While Reprise is running, it scans `~/.codex/sessions`, `~/.claude/projects`, and `~/.grok/sessions` at startup and every 30 seconds. `CODEX_HOME`, `CLAUDE_CONFIG_DIR`, and `GROK_HOME` are respected when present in the app's environment. Use **Sync now** for an immediate refresh, or turn off **Auto-save local sessions** at the bottom of the library.
+While Reprise is running, it scans `~/.codex/sessions`, `~/.codex/archived_sessions`, `~/.claude/projects`, and `~/.grok/sessions` at startup and every 30 seconds. `CODEX_HOME`, `CLAUDE_CONFIG_DIR`, and `GROK_HOME` are respected when present in the app's environment. Use **Sync now** for an immediate refresh, or turn off automatic discovery in **Settings**.
 
-Only session ID, name, assistant, project directory, activity time, and source metadata are retained. Conversation messages and tool output are not imported. Header reading is limited to the first 256 KB of Codex/Claude transcripts; the additional name metadata reads are bounded as described above. For Grok Build, only `summary.json` is read, with a 1 MB limit; its `info.id` and `info.cwd` fields are authoritative, and its saved activity timestamps take precedence over the file modification time. Grok's generated title is retained as the session name; transcripts, prompts, and conversation summaries are not imported. Unsupported or incomplete files are skipped and may be found on a later scan. Nested subagent folders and symbolic-link summaries are excluded.
+Older Codex conversations are also found in the newest local `state_N.sqlite` history index, opened read-only and limited to 5,000 metadata rows. Reprise checks whether each referenced transcript exists. Missing transcripts remain visible as **History not local** references with Resume disabled. Reprise cannot reconstruct missing conversation files; open the conversation in Codex if available, then sync again.
+
+Only session ID, name, assistant, project directory, activity time, source metadata, and local-history availability are retained. Conversation messages and tool output are not imported. Header reading is limited to the first 256 KB of Codex/Claude transcripts; the additional name metadata reads are bounded as described above. For Grok Build, only `summary.json` is read, with a 1 MB limit; its `info.id` and `info.cwd` fields are authoritative, and its saved activity timestamps take precedence over the file modification time. Grok's generated title is retained as the session name; transcripts, prompts, and conversation summaries are not imported. Unsupported or incomplete files are skipped and may be found on a later scan. Nested subagent folders and symbolic-link summaries are excluded.
 
 Grok Build's summary format is shared by TUI, headless, and ACP clients and does not reliably identify the originating client. Imported Grok sources therefore stay Unknown unless set manually. This integration supports the installed Grok Build format, not arbitrary third-party Grok clients or cloud chat histories. See [Grok Build's session format](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-pager/docs/user-guide/17-sessions.md).
 

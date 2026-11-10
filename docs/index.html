@@ -28,7 +28,7 @@
       content="https://en-code23.github.io/reprise/assets/library-light.png"
     />
     <link rel="icon" href="assets/reprise-icon.png?v=1.5.1" />
-    <link rel="stylesheet" href="styles.css?v=1.7.0" />
+    <link rel="stylesheet" href="styles.css?v=1.8.0" />
   </head>
   <body>
     <header class="navigation wrap">
@@ -58,7 +58,7 @@
         <h1>Every project.<br /><span>One place to resume.</span></h1>
         <p class="intro">
           Codex in one terminal. Claude in another. Reprise keeps their sessions
-          together by project, ready for your next good idea.
+          together by project, ready to continue where you left off.
         </p>
         <div class="hero-actions">
           <a
@@ -108,10 +108,10 @@
           </div>
           <img
             id="app-preview"
-            src="assets/library-light.png?v=1.7.0"
+            src="assets/library-light.png?v=1.8.0"
             alt="Reprise project library: five project folders, with 18 Billing portal sessions grouped into one row and a Resume in Terminal action."
-            width="1180"
-            height="800"
+            width="1040"
+            height="720"
             fetchpriority="high"
           />
         </div>
@@ -136,8 +136,8 @@
           <h2>You see projects,<br />not repeated names.</h2>
           <p>
             One directory gets one place in your library, even across
-            assistants. Give each conversation a name, then find it in the project's
-            history or search. Previous sessions stay available, newest first.
+            assistants. Search by folder name, then choose a named conversation
+            from the project's history. Session history stays together, newest first.
           </p>
         </article>
         <article>
@@ -180,9 +180,9 @@
             <summary>Can I name individual sessions?</summary>
             <p>
               Yes. Reprise imports recorded Codex, Claude, and Grok titles when available.
-              On Mac, select a session and click Rename; on Windows, choose Rename / edit.
+              On Mac, right-click a session and choose Rename; on Windows, choose … → Rename / edit session.
               You can also enter a name while adding a screenshot or command. Names are
-              searchable and stay saved when sessions sync. Clear your custom name to use
+              shown in project history and stay saved when sessions sync. Clear your custom name to use
               the imported title again. Naming a session in Reprise leaves its project
               and resume command intact.
             </p>
@@ -190,13 +190,14 @@
           <details>
             <summary>Can I separate desktop app and CLI sessions?</summary>
             <p>
-              Yes. Session history labels the recorded source, and the All
-              sources menu filters Desktop app, CLI, IDE extension, SDK /
-              automation, Multiple clients, or Unknown. Codex and Claude local
-              coding sessions are detected from their metadata. Missing or
-              ambiguous records stay Unknown; you can correct them in Session
-              details. Regular cloud-only Claude chats are not imported. Resume
-              still uses your chosen terminal.
+              Yes. Open Filter to choose an assistant and source, such as Desktop app
+              or CLI. Main sessions hides SDK/automation by default. Choose All sources
+              or SDK / automation to include it. Confirmed subagents stay hidden.
+            </p>
+            <p>
+              Source labels come from local Codex and Claude metadata. Missing or
+              ambiguous records stay Unknown; you can correct them in Session details.
+              Regular cloud-only Claude chats are not imported. Resume uses your chosen terminal.
             </p>
           </details>
           <details>
@@ -208,6 +209,16 @@
               metadata format does not reliably identify the app or CLI source,
               so the source stays Unknown unless you set it manually. Cloud
               chats and other Grok client formats are not imported.
+            </p>
+          </details>
+          <details>
+            <summary>Where are my older sessions?</summary>
+            <p>
+              Reprise reads archived Codex transcripts and the local Codex history index,
+              along with older Claude metadata. If a Codex transcript is missing from this
+              computer, its saved reference shows History not local and Resume is disabled.
+              Open that conversation in Codex if available, then sync Reprise. Reprise
+              cannot recreate a missing conversation file.
             </p>
           </details>
           <details>
@@ -224,7 +235,8 @@
               Assign a project directory when saving a capture. Older captures
               without a directory live under Unassigned until you choose their
               folder. The filename doesn’t become a project in your main
-              library.
+              library. If local discovery identifies the session's project, it fills
+              the missing folder while preserving your saved name and notes.
             </p>
           </details>
           <details>
@@ -233,7 +245,7 @@
               macOS 14 or a Windows x64 PC, the relevant CLI installed and signed in, and a
               project folder that still exists. On first use, macOS may ask to
               let Reprise control your selected terminal. Choose your default in
-              the library sidebar; Ghostty on Mac requires version 1.3 or newer.
+              Settings; Ghostty on Mac requires version 1.3 or newer.
               Windows supports Windows Terminal, PowerShell, and Command Prompt.
             </p>
           </details>
@@ -248,7 +260,7 @@
           <details>
             <summary>Can I open a session in VS Code or another editor?</summary>
             <p>
-              Yes. Choose Default editor in the sidebar, then click Open in VS Code
+              Yes. Choose Default editor in Settings, then click Open in VS Code
               (or your selected editor). Reprise opens the project folder and copies
               that session’s resume command. Paste it into the editor’s terminal to
               continue. Choose another editor selects an app on Mac or an editor’s .exe on Windows.
@@ -257,7 +269,7 @@
           <details>
             <summary>Can Reprise update itself?</summary>
             <p>
-              From v1.5.0, Check for updates in the library sidebar or menubar options
+              From v1.5.0, Check for updates in Settings or the menubar options
               downloads, verifies, installs, and relaunches updates inside the app.
               Older Mac versions need v1.5.0 or newer installed once from the DMG.
               Windows installer builds update through Velopack; portable copies can be replaced manually.
@@ -301,6 +313,6 @@
         >MIT License</a
       >
     </footer>
-    <script src="app.js?v=1.7.0"></script>
+    <script src="app.js?v=1.8.0"></script>
   </body>
 </html>

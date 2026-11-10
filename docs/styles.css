@@ -235,7 +235,7 @@ h1 span {
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 1180/800;
+  aspect-ratio: auto;
   object-fit: contain;
   object-position: top;
   background: #282c27;
