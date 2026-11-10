@@ -81,7 +81,9 @@ internal sealed class LibraryWindow : Form
         footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); footer.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 60)); footer.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 84));
         count.Font = new Font(Font.FontFamily, 9); count.Dock = DockStyle.Fill; count.TextAlign = ContentAlignment.MiddleLeft;
         sync.Text = "Sync"; sync.AutoSize = false; sync.Dock = DockStyle.Fill; sync.Margin = new Padding(0, 4, 4, 0);
+        sync.MinimumSize = new Size(0, 36);
         var settings = Theme.Button("Settings", (_, _) => ShowSettings()); settings.AutoSize = false; settings.Dock = DockStyle.Fill; settings.Margin = new Padding(0, 4, 0, 0);
+        settings.MinimumSize = new Size(0, 36);
         footer.Controls.Add(count, 0, 0); footer.Controls.Add(sync, 1, 0); footer.Controls.Add(settings, 2, 0); sidebar.Controls.Add(footer, 0, 3);
 
         var main = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 6, Padding = new Padding(20, 12, 20, 0), BackColor = Color.White, Margin = new Padding(0) };
@@ -113,23 +115,28 @@ internal sealed class LibraryWindow : Form
         model.SelectedIndexChanged += (_, _) => RefreshProjects(); source.SelectedIndexChanged += (_, _) => RefreshProjects();
         toolbar.Controls.Add(filters); toolbar.Controls.Add(Theme.Button("Add session", (_, _) => ShowCapture()));
         toolbar.Controls.Add(Theme.Button("Add screenshot…", (_, _) => ChooseScreenshot())); main.Controls.Add(toolbar, 0, 0);
-        var heading = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, Margin = new Padding(0) };
+        var heading = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 3, Margin = new Padding(0) };
         heading.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        heading.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 44));
         heading.RowStyles.Add(new RowStyle(SizeType.Absolute, 40)); heading.RowStyles.Add(new RowStyle(SizeType.Absolute, 32)); heading.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         title.Font = new Font(Font.FontFamily, 18, FontStyle.Bold); title.Dock = DockStyle.Fill; title.AutoSize = false; title.AutoEllipsis = true;
         path.Dock = DockStyle.Fill; path.AutoSize = false; path.AutoEllipsis = true; path.ForeColor = Theme.Secondary;
         heading.Controls.Add(title, 0, 0); heading.Controls.Add(path, 0, 1);
+        heading.SetColumnSpan(path, 2);
         var actions = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = true, Margin = new Padding(0), Padding = new Padding(0, 6, 0, 0) };
-        var more = Theme.Button("More", (_, _) => { });
+        var more = Theme.Button("…", (_, _) => { });
+        more.AccessibleName = "Session actions"; more.MinimumSize = new Size(36, 36); more.AutoSize = false; more.Size = new Size(40, 36); more.Margin = new Padding(0);
         more.Click += (_, _) =>
         {
             var menu = new ContextMenuStrip();
             menu.Items.Add("Rename / edit session…", null, (_, _) => edit.PerformClick());
             menu.Items.Add("Remove from library", null, (_, _) => remove.PerformClick()); menu.Show(more, new Point(0, more.Height));
         };
-        actions.Controls.AddRange([resume, copy, editor, more]); heading.Controls.Add(actions, 0, 2); main.Controls.Add(heading, 0, 1);
+        heading.Controls.Add(more, 1, 0);
+        actions.Controls.AddRange([resume, copy, editor]); heading.Controls.Add(actions, 0, 2); heading.SetColumnSpan(actions, 2); main.Controls.Add(heading, 0, 1);
         history.Dock = DockStyle.Fill; history.Margin = new Padding(0); history.EnableHeadersVisualStyles = false;
         history.ColumnHeadersDefaultCellStyle.BackColor = Theme.Paper; history.ColumnHeadersDefaultCellStyle.ForeColor = Theme.Secondary;
+        history.ColumnHeadersDefaultCellStyle.SelectionBackColor = Theme.Paper; history.ColumnHeadersDefaultCellStyle.SelectionForeColor = Theme.Secondary;
         history.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize; history.RowTemplate.Height = 48;
         history.DefaultCellStyle.SelectionBackColor = Theme.Sage; history.DefaultCellStyle.SelectionForeColor = Theme.Ink; history.DefaultCellStyle.Padding = new Padding(5);
         history.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal; history.GridColor = Theme.Paper;
@@ -219,7 +226,7 @@ internal sealed class LibraryWindow : Form
         title.Text = CurrentProject?.Name ?? "Your next session belongs here";
         path.Text = CurrentProject?.Directory ?? "Add a screenshot, enter a command, or sync local Codex, Claude, and Grok sessions.";
         command.Text = session?.Command ?? ""; note.Text = session?.Note ?? ""; origin.Text = session == null ? "" : $"Source: {session.Origin} · {(session.DetectedAutomatically ? "Automatically saved" : "Screenshot / manual")}";
-        resume.Text = "Resume in " + terminal.Text;
+        resume.Text = "Resume"; resume.AccessibleDescription = "Resume in " + terminal.Text;
         var selectedEditor = store.Preferences.EditorPath ?? NativeServices.DefaultEditor();
         editor.Text = selectedEditor == null ? "Choose editor…" : "Open in " + NativeServices.EditorName(selectedEditor);
         if (session?.HasLocalHistory == false) message.Text = "History is not on this PC. Open this conversation in Codex, then sync.";
@@ -309,6 +316,8 @@ internal sealed class LibraryWindow : Form
             foreach (Control control in parent.Controls)
             {
                 if (!control.Visible) continue;
+                if (control is Button && parent is FlowLayoutPanel { AutoScroll: false } && !parent.ClientRectangle.Contains(control.Bounds))
+                    throw new InvalidOperationException($"Action is clipped by its container: {control.Text} {control.Bounds}; container {parent.ClientRectangle}");
                 if (control is Button or TextBox or ComboBox or Label or DataGridView)
                 {
                     var bounds = control.RectangleToScreen(control.ClientRectangle);
