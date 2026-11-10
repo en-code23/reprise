@@ -266,6 +266,9 @@ struct LibraryView: View {
                             NSPasteboard.general.clearContents(); NSPasteboard.general.setString(session.command, forType: .string)
                             copied = true; Task { try? await Task.sleep(for: .seconds(1.5)); copied = false }
                         }.buttonStyle(RepriseQuietButtonStyle()).font(.system(size: 12))
+                        Button("Rename") { editing = session }
+                            .buttonStyle(RepriseQuietButtonStyle()).font(.system(size: 12))
+                            .help("Rename the selected session")
                     }
                     VStack(alignment: .leading, spacing: 6) {
                         Button {
@@ -297,14 +300,11 @@ struct LibraryView: View {
                     }
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(alignment: .firstTextBaseline) {
-                            Text(session.displayName).font(.system(size: 14, weight: .semibold))
-                                .lineLimit(2).textSelection(.enabled).accessibilityIdentifier("session.name")
+                            Text("COMMAND").font(.system(size: 10, weight: .semibold)).tracking(1).foregroundStyle(.secondary)
                             Spacer()
-                            Button("Rename") { editing = session }
-                                .buttonStyle(RepriseQuietButtonStyle()).font(.system(size: 12))
-                                .help("Name this conversation without changing the project name")
+                            Text(session.displayName).font(.system(size: 11)).foregroundStyle(.secondary)
+                                .lineLimit(1).help(session.displayName).accessibilityIdentifier("session.name")
                         }
-                        Text("COMMAND").font(.system(size: 10, weight: .semibold)).tracking(1).foregroundStyle(.secondary)
                         Text(session.command).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
                             .accessibilityIdentifier("session.command")
                             .foregroundStyle(Color.repriseBone).padding(14).frame(maxWidth: .infinity, alignment: .leading)
@@ -348,8 +348,10 @@ struct LibraryView: View {
                     }.font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
                 }
                 Spacer()
-                Text(String(item.command.split(separator: " ").last?.suffix(8) ?? ""))
-                    .font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
+                if item.name != nil || item.detectedName != nil {
+                    Text(String(item.sessionIdentifier.suffix(8)))
+                        .font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
+                }
                 Image(systemName: selected ? "checkmark.circle.fill" : "circle").foregroundStyle(selected ? Color.repriseGreen : Color.secondary.opacity(0.4))
             }.foregroundStyle(.primary).padding(10).frame(maxWidth: .infinity)
                 .background(selected ? Color.repriseGreen.opacity(0.08) : .clear, in: RoundedRectangle(cornerRadius: 7))

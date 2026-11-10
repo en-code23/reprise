@@ -15,6 +15,7 @@ internal sealed class CaptureWindow : Form
     internal CaptureWindow(Session? editing = null)
     {
         original = editing is null ? new Session() : editing with { };
+        if (editing != null) status.Text = "Leave the session name blank to use the imported name or session ID.";
         Text = editing == null ? "Add session — Reprise" : "Session details — Reprise";
         Font = new Font("Segoe UI", 10); BackColor = Theme.Paper; ForeColor = Theme.Ink;
         Icon = NativeServices.LoadIcon(); StartPosition = FormStartPosition.CenterParent; MinimumSize = new Size(620, 650); Size = new Size(680, 730);

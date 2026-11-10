@@ -25,6 +25,10 @@ struct CapturePopoverView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
+            if coordinator.phase == .review {
+                Divider()
+                reviewActions.padding(.horizontal, 16).padding(.vertical, 10)
+            }
             Divider()
             footer
         }
@@ -247,21 +251,18 @@ struct CapturePopoverView: View {
                         .background(.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 6))
                 }
 
-                HStack {
-                    Button("Choose another…") {
-                        coordinator.chooseImage()
-                    }
-                    Spacer()
-                    Button("Save to Library") {
-                        coordinator.save()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.repriseGreen)
-                    .disabled(!coordinator.canSave)
-                    .keyboardShortcut(.return, modifiers: .command)
-                }
             }
             .padding(16)
+        }
+    }
+
+    private var reviewActions: some View {
+        HStack {
+            Button("Choose another…") { coordinator.chooseImage() }
+            Spacer()
+            Button("Save to Library") { coordinator.save() }
+                .buttonStyle(.borderedProminent).tint(.repriseGreen)
+                .disabled(!coordinator.canSave).keyboardShortcut(.return, modifiers: .command)
         }
     }
 
