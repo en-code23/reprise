@@ -91,7 +91,14 @@ fn managed_turns(provider: &str) -> Vec<Value> {
         .read_to_string(&mut output)
         .unwrap();
     let status = child.wait().unwrap();
-    assert!(status.success(), "{output}");
+    let mut errors = String::new();
+    child
+        .stderr
+        .take()
+        .unwrap()
+        .read_to_string(&mut errors)
+        .unwrap();
+    assert!(status.success(), "{output}\n{errors}");
     let records = std::fs::read_to_string(root.join("trace.jsonl"))
         .unwrap()
         .lines()

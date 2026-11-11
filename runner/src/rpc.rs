@@ -77,7 +77,9 @@ pub fn command(executable: &Path, args: &[String], cwd: &Path) -> Command {
                 .collect::<Vec<_>>()
                 .join(" ")
         );
-        c.args(["/D", "/S", "/C", &quoted]);
+        // cmd.exe uses its own parser, not CommandLineToArgvW. Passing this
+        // through ordinary argument escaping inserts literal backslashes.
+        c.args(["/D", "/S", "/C"]).raw_arg(&quoted);
         c
     } else {
         let mut c = Command::new(executable);
