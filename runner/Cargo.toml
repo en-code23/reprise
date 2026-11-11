@@ -1,6 +1,6 @@
 [package]
 name = "reprise-agent"
-version = "1.9.0"
+version = "1.9.1"
 edition = "2024"
 license = "MIT"
 description = "Local managed-session runner for Reprise"

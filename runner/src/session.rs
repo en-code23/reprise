@@ -101,7 +101,7 @@ impl Agent {
         };
         match request.provider.as_str() {
             "codex" => {
-                a.call("initialize",json!({"clientInfo":{"name":"reprise","title":"Reprise managed sessions","version":"1.9.0"}}),console,false).await?;
+                a.call("initialize",json!({"clientInfo":{"name":"reprise","title":"Reprise managed sessions","version":env!("CARGO_PKG_VERSION")}}),console,false).await?;
                 a.rpc
                     .handle
                     .send(json!({"method":"initialized","params":{}}))
@@ -139,7 +139,7 @@ impl Agent {
                 a.set_claude_catalog();
             }
             _ => {
-                let initialized=a.call("initialize",json!({"protocolVersion":1,"clientInfo":{"name":"reprise","title":"Reprise","version":"1.9.0"},"clientCapabilities":{"fs":{"readTextFile":false,"writeTextFile":false},"terminal":false}}),console,false).await?;
+                let initialized=a.call("initialize",json!({"protocolVersion":1,"clientInfo":{"name":"reprise","title":"Reprise","version":env!("CARGO_PKG_VERSION")},"clientCapabilities":{"fs":{"readTextFile":false,"writeTextFile":false},"terminal":false}}),console,false).await?;
                 if initialized["agentCapabilities"]["loadSession"] == false {
                     return Err("This Grok version cannot load existing ACP sessions. Update Grok Build first.".into());
                 }

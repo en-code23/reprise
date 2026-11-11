@@ -27,7 +27,7 @@ Windows sessions and preferences live in `%LOCALAPPDATA%\RepriseLibrary`, outsid
 Build on Windows with .NET 10, stable Rust, Python 3, and the Visual Studio C++ redistributable files available:
 
 ```powershell
-./scripts/build-windows.ps1 -Version 1.9.0
+./scripts/build-windows.ps1 -Version 1.9.1
 ```
 
 The script runs core checks, publishes a self-contained app, verifies its UI/OCR on Windows, and builds the installer and update packages with pinned Velopack tooling. `-TestInstaller` additionally installs and tests the package on a clean CI runner. Windows previews are saved under `build/windows/qa/`. Run the portable core checks on any .NET 10 host with `dotnet run --project windows/Reprise.Core.Tests -c Release`.

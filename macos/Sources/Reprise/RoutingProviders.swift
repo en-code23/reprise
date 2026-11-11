@@ -157,7 +157,7 @@ enum RoutingProviders {
     static func codex(now: Date = .now) throws -> ProviderRoutingState {
         func message(_ object: [String: Any]) -> Data { var data = (try? JSONSerialization.data(withJSONObject: object)) ?? Data(); data.append(10); return data }
         var models: [String: Any]?, usage: [String: Any]?
-        _ = try RoutingTool.run("codex", arguments: ["app-server"], initial: message(["id": 1, "method": "initialize", "params": ["clientInfo": ["name": "reprise", "title": "Reprise", "version": "1.9.0"]]])) { line in
+        _ = try RoutingTool.run("codex", arguments: ["app-server"], initial: message(["id": 1, "method": "initialize", "params": ["clientInfo": ["name": "reprise", "title": "Reprise", "version": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "development"]]])) { line in
             guard let object = try? JSONSerialization.jsonObject(with: line) as? [String: Any], let id = object["id"] as? Int else { return nil }
             if id == 1 {
                 return message(["method": "initialized", "params": [:]]) + message(["id": 2, "method": "model/list", "params": ["limit": 100, "includeHidden": false]]) + message(["id": 3, "method": "account/rateLimits/read"])

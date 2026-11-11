@@ -554,7 +554,7 @@ pub async fn probe_codex() -> Result<State> {
     let _ = quiet(
         &mut rpc,
         "initialize",
-        json!({"clientInfo":{"name":"reprise","title":"Reprise","version":"1.9.0"}}),
+        json!({"clientInfo":{"name":"reprise","title":"Reprise","version":env!("CARGO_PKG_VERSION")}}),
     )
     .await?;
     rpc.handle

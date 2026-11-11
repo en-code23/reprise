@@ -37,7 +37,7 @@ let previewPlatform = systemPlatform;
 let previewDark = false;
 function renderPreview() {
   const windows = previewPlatform === "windows";
-  const path = (windows ? "assets/windows-library.png" : previewDark ? "assets/library-dark.png" : "assets/library-light.png") + "?v=1.9.0";
+  const path = (windows ? "assets/windows-library.png" : previewDark ? "assets/library-dark.png" : "assets/library-light.png") + "?v=1.9.1";
   const preview = document.getElementById("app-preview");
   preview.src = path;
   preview.alt = windows ? "Native Reprise Windows project library with example sessions." : "Native Reprise Mac project library with example sessions.";

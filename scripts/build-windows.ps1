@@ -1,4 +1,4 @@
-param([string]$Version = "1.9.0", [switch]$TestInstaller)
+param([string]$Version = "1.9.1", [switch]$TestInstaller)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $publish = Join-Path $root 'build/windows/publish'
