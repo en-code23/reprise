@@ -25,6 +25,18 @@ for line in sys.stdin:
         trace.write(json.dumps(packet) + "\n")
     method = packet.get("method", "")
     params = packet.get("params", {})
+    if packet.get("type") == "control_request":
+        request = packet["request"]
+        if request["subtype"] == "initialize":
+            result = {"models": [{"value": model, "resolvedModel": "claude-" + model + "-5-5", "displayName": model, "supportedEffortLevels": ["low", "medium", "high"]} for model in ("haiku", "sonnet", "opus")]}
+        else:
+            result = {}
+        send({"type": "control_response", "response": {"subtype": "success", "request_id": packet["request_id"], "response": result}})
+        continue
+    if packet.get("type") == "user":
+        send({"type": "stream_event", "event": {"type": "content_block_delta", "delta": {"type": "text_delta", "text": "Fixture response."}}})
+        send({"type": "result", "session_id": packet["session_id"], "is_error": False})
+        continue
     if "id" not in packet:
         continue
     if method == "initialize":

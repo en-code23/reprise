@@ -56,11 +56,16 @@ fn managed_turns(provider: &str) -> Vec<Value> {
         .stderr(Stdio::piped())
         .spawn()
         .unwrap();
+    let input = if provider == "claude" {
+        "/model opus high\nDesign the database schema\n/model sonnet medium\nNow polish the UI layout\n/quit\n"
+    } else {
+        "Design the database schema\nNow polish the UI layout\n/quit\n"
+    };
     child
         .stdin
         .take()
         .unwrap()
-        .write_all(b"Design the database schema\nNow polish the UI layout\n/quit\n")
+        .write_all(input.as_bytes())
         .unwrap();
     let until = Instant::now() + Duration::from_secs(20);
     loop {
@@ -95,16 +100,21 @@ fn managed_turns(provider: &str) -> Vec<Value> {
     let prompts = records
         .iter()
         .filter(|p| {
-            p["method"]
-                == if provider == "codex" {
-                    "turn/start"
-                } else {
-                    "session/prompt"
-                }
+            (provider == "claude" && p["type"] == "user")
+                || p["method"]
+                    == if provider == "codex" {
+                        "turn/start"
+                    } else {
+                        "session/prompt"
+                    }
         })
         .collect::<Vec<_>>();
     assert_eq!(prompts.len(), 2, "{output}");
     for p in prompts {
+        if provider == "claude" {
+            assert_eq!(p["session_id"], session);
+            continue;
+        }
         assert_eq!(
             p["params"][if provider == "codex" {
                 "threadId"
@@ -147,4 +157,26 @@ fn grok_managed_session_switches_using_advertised_configuration() {
     assert_eq!(changes[1]["params"]["value"]["value"], "high");
     assert_eq!(changes[2]["params"]["value"]["value"], "grok-test-strong");
     assert_eq!(changes[3]["params"]["value"]["value"], "medium");
+}
+#[test]
+fn claude_managed_session_applies_acknowledged_overrides_before_user_messages() {
+    let records = managed_turns("claude");
+    let changes = records
+        .iter()
+        .filter(|p| p["request"]["subtype"] == "apply_flag_settings")
+        .collect::<Vec<_>>();
+    assert_eq!(changes.len(), 2);
+    assert_eq!(changes[0]["request"]["settings"]["model"], "opus");
+    assert_eq!(changes[0]["request"]["settings"]["effortLevel"], "high");
+    assert_eq!(changes[1]["request"]["settings"]["model"], "sonnet");
+    assert_eq!(changes[1]["request"]["settings"]["effortLevel"], "medium");
+    let mut selected = 0;
+    for record in records {
+        if record["request"]["subtype"] == "apply_flag_settings" {
+            selected += 1;
+        }
+        if record["type"] == "user" {
+            assert!(selected > 0);
+        }
+    }
 }
