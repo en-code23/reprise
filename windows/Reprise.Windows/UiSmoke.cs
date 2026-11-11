@@ -34,6 +34,18 @@ internal static class UiSmoke
                 settingsImage.Save(Path.Combine(output, "windows-settings.png"), ImageFormat.Png); settings.Hide();
                 window.Hide();
             }
+            var routing = new ModelSelectionStore(Path.Combine(temporary, "routing"), Path.Combine(AppContext.BaseDirectory, "reprise-agent.exe"));
+            using (var selection = new ModelSelectionWindow(routing)) {
+                selection.Show(); Application.DoEvents();
+                using var image = new Bitmap(selection.Width, selection.Height); selection.DrawToBitmap(image, new Rectangle(Point.Empty, selection.Size));
+                image.Save(Path.Combine(output, "windows-model-selection.png"), ImageFormat.Png); selection.Hide();
+            }
+            var runnerInfo = new ProcessStartInfo(Path.Combine(AppContext.BaseDirectory, "reprise-agent.exe")) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true };
+            runnerInfo.ArgumentList.Add("--version");
+            using (var runner = Process.Start(runnerInfo)!) {
+                var version = runner.StandardOutput.ReadToEnd();
+                if (!runner.WaitForExit(15000) || runner.ExitCode != 0 || !version.Contains(NativeServices.Version)) throw new InvalidOperationException("The bundled managed-session runner did not start or has the wrong version.");
+            }
             using (var capture = new CaptureWindow(store.Sessions[0]))
             {
                 capture.Show(); Application.DoEvents();

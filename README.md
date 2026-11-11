@@ -24,10 +24,10 @@ Choose **Windows Terminal**, **PowerShell**, or **Command Prompt** as the defaul
 
 Windows sessions and preferences live in `%LOCALAPPDATA%\RepriseLibrary`, outside the install directory. Closing or updating the app preserves them; the original CLI session files are never modified.
 
-Build on Windows with .NET 10 and the Visual Studio C++ redistributable files available:
+Build on Windows with .NET 10, stable Rust, Python 3, and the Visual Studio C++ redistributable files available:
 
 ```powershell
-./scripts/build-windows.ps1 -Version 1.8.0
+./scripts/build-windows.ps1 -Version 1.9.0
 ```
 
 The script runs core checks, publishes a self-contained app, verifies its UI/OCR on Windows, and builds the installer and update packages with pinned Velopack tooling. `-TestInstaller` additionally installs and tests the package on a clean CI runner. Windows previews are saved under `build/windows/qa/`. Run the portable core checks on any .NET 10 host with `dotnet run --project windows/Reprise.Core.Tests -c Release`.
@@ -75,6 +75,38 @@ macOS may ask to allow Reprise to control your selected terminal on first use. P
 ## Open in your editor
 
 Choose **Default editor** in **Settings**. Installed editors appear in the menu; use **Choose another editor…** to select any other editor application. The choice is saved. Click **Open in VS Code** (or your selected editor) to open the session's project folder and copy its resume command. Paste it into the editor's terminal to continue that conversation. Reprise opens the folder through macOS, so an editor command-line launcher is not required. It copies the command only after the project opens successfully; it does not run it or change editor configuration.
+
+## Optional automatic model selection
+
+In **Settings → Model selection**, enable automatic selection and open **Usage and model settings**. On Windows, use **Settings → Automatic model selection**. The feature is off until you enable it. It chooses within the conversation’s existing provider, preserving its session ID. It cannot transfer a Claude conversation to Codex or Grok.
+
+With **Switch between turns in managed sessions** enabled, Resume opens the bundled Reprise runner in your chosen terminal, including Ghostty. Each new task is assessed before it is sent. Codex uses its app-server protocol, Claude uses its stream-JSON session controls, and Grok Build uses ACP. Changes happen between completed turns. Already-running native app and CLI interfaces are not remotely controlled. Turn this option off to choose a model at launch and retain the provider’s usual terminal interface. If the provider rejects a setting, the prompt is not sent with a silently substituted model.
+
+The runner provides text streaming, tool activity, explicit permission requests, cancellation with Ctrl+C, and these commands:
+
+| Command | Action |
+| --- | --- |
+| `/usage` | Show the latest quota windows and resets |
+| `/work ui`, `backend`, `foundation`, `small`, or `auto` | Set or clear a work-type hint |
+| `/model <id> [effort]` | Explicitly choose an advertised model and effort |
+| `/auto off` / `/auto on` | Pause automatic changes or return to automatic selection |
+| `/quit` | Close the managed session; keep the original conversation history |
+
+Provider-specific native TUI commands, image attachments, and interactive extensions are not reproduced by the text runner. Use launch-only selection or **Copy original CLI command** for the provider’s full native interface. Managed Copy command and Open in editor copy the runner command; on Windows paste it into PowerShell. The original saved resume command is retained in Session details.
+
+Selection uses a bounded local scan of filenames, folder structure, modification times, test coverage by file count, manifest count, and capped Git commit count. It also considers task wording between turns, or your chosen work type. Source file contents are not sent to a separate classification model. This is a heuristic estimate of task suitability, not a guarantee of a perfect choice or exact token cost. Model roles can be adjusted in settings as providers change their catalogs. Normal choices stop at high effort. The optional max exception requires a large, early backend foundation task and at least 75% shared quota remaining; reset timing alone never enables max. Ultra is never selected automatically.
+
+Usage pacing considers every applicable shared and model-specific window. Low headroom or a long wait until reset reduces capability; a near reset can increase capability only if the other shared windows also have room. An elapsed reset time does not locally refill a cached quota. Unknown or stale usage uses a conservative verified model, excluding Fable and reset boosts; a freshly exhausted shared limit blocks automatic turns. Actual usage and billing remain governed by each provider’s account settings and enforcement.
+
+Codex reads its account’s advertised model catalog, supported efforts, and rate-limit windows. **Connect Claude usage** explicitly enables reading Claude Code’s existing subscription login; macOS may ask for Keychain access. Credentials stay in memory during the provider request and are never placed in Reprise’s settings, usage cache, command descriptor, or clipboard. Reprise does not refresh or modify those credentials. Claude’s usage endpoint can change independently of this app.
+
+Fable is additionally opt-in. Reprise needs fresh shared weekly headroom and a fresh separate Fable allowance. Named Fable fields are detected automatically. If Claude returns an unnamed allowance field, manually match it to Fable in Claude’s Usage screen before selecting that field and refreshing. Reprise never guesses an internal field’s meaning and never redeems reset credits. When the mapping or allowance is unknown, it uses another model. See [Claude’s Fable allowance guidance](https://support.claude.com/en/articles/15424964-claude-fable-models-on-your-plan).
+
+Grok Build currently does not expose plan quota percentages through `grok usage --json` on every account. Its ACP model and effort capabilities are supported, but missing usage stays Unknown and cannot trigger reset boosts. Token counts and API costs are not treated as subscription quota. Grok must be signed in and support loading sessions through ACP.
+
+Preferences are stored in `model-routing.json` alongside the library; metadata-only runner caches are under `routing-usage`. Original session data and per-project exclusions are preserved. The runner uses each provider’s existing approval and sandbox settings and asks before granting requested tool permissions. It does not enable bypass modes.
+
+The managed runner builds with `cargo build --locked --manifest-path runner/Cargo.toml`; run its protocol and policy tests with `cargo test --locked --manifest-path runner/Cargo.toml`. Mac release builds also need the `aarch64-apple-darwin` and `x86_64-apple-darwin` Rust targets. Packaged releases include the runner and dependency notices; users do not need Rust installed.
 
 ## In-app updates
 

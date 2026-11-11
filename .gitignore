@@ -1,4 +1,5 @@
 .DS_Store
+runner/target/
 .build/
 macos/.build/
 build/

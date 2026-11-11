@@ -1,4 +1,4 @@
-param([string]$Version = "1.8.0", [switch]$TestInstaller)
+param([string]$Version = "1.9.0", [switch]$TestInstaller)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $publish = Join-Path $root 'build/windows/publish'
@@ -19,8 +19,15 @@ if ((Get-FileHash $model -Algorithm SHA256).Hash -ne '7D4322BD2A7749724879683FC3
 
 dotnet run --project "$root/windows/Reprise.Core.Tests" -c Release
 if ($LASTEXITCODE -ne 0) { throw 'Windows core tests failed.' }
+cargo test --locked --manifest-path "$root/runner/Cargo.toml"
+if ($LASTEXITCODE -ne 0) { throw 'Managed-session tests failed.' }
+cargo build --locked --release --manifest-path "$root/runner/Cargo.toml"
+if ($LASTEXITCODE -ne 0) { throw 'Managed-session runner build failed.' }
 dotnet publish "$root/windows/Reprise.Windows/Reprise.Windows.csproj" -c Release -r win-x64 --self-contained true -p:Version=$Version -o $publish
 if ($LASTEXITCODE -ne 0) { throw 'Windows app publish failed.' }
+Copy-Item "$root/runner/target/release/reprise-agent.exe" $publish -Force
+python "$root/scripts/runner-licenses.py" "$publish/licenses/runner"
+if ($LASTEXITCODE -ne 0) { throw 'Runner dependency notices could not be bundled.' }
 
 # App-local redistributable CRT files let the bundled Tesseract DLLs run without
 # asking users to install a separate Visual C++ runtime.

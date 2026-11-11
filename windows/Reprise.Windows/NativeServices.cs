@@ -10,7 +10,7 @@ namespace Reprise.Windows;
 
 internal static class NativeServices
 {
-    internal static string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.8.0";
+    internal static string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.9.0";
     internal static readonly string[] Terminals = ["Windows Terminal", "PowerShell", "Command Prompt"];
     internal static readonly string[] Origins = ["Unknown", "Desktop app", "CLI", "IDE extension", "SDK / automation", "Multiple clients"];
     internal static Icon LoadIcon()
@@ -37,15 +37,18 @@ internal static class NativeServices
             throw new InvalidOperationException("The Windows project folder is missing. Use Edit details to choose its current location.");
         return Path.GetFullPath(session.ProjectDirectory!);
     }
-    internal static void Resume(Session session, string terminal)
+    internal static void Resume(Session session, string terminal, string[]? managed = null, SelectionDecision? decision = null)
     {
         if (session.HasLocalHistory == false) throw new InvalidOperationException("This conversation’s history is not on this PC. Open it in Codex first, then sync Reprise.");
         var directory = RequireDirectory(session);
-        var arguments = Commands.ValidatedArguments(session.Command);
-        var executable = FindExecutable(arguments[0] + ".exe") ?? FindExecutable(arguments[0] + ".cmd")
+        if (decision?.Blocked == true) throw new InvalidOperationException(string.Join(" ", decision.Reasons));
+        var arguments = managed ?? [.. Commands.ValidatedArguments(session.Command), .. decision?.Arguments(session.Model) ?? []];
+        var executable = managed != null ? arguments[0] : FindExecutable(arguments[0] + ".exe") ?? FindExecutable(arguments[0] + ".cmd")
             ?? throw new InvalidOperationException($"{arguments[0]} was not found on your Windows PATH. Install and sign in to its Windows CLI first.");
+        var script = "$ErrorActionPreference = 'Stop'; Set-Location -LiteralPath " + Commands.PowerShellLiteral(directory) + "; & " + Commands.PowerShellLiteral(executable) + " " + string.Join(" ", arguments.Skip(1).Select(Commands.PowerShellLiteral));
+        var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
         ProcessStartInfo info;
-        if (terminal == "Command Prompt")
+        if (terminal == "Command Prompt" && managed == null && decision == null)
         {
             info = new(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "cmd.exe"));
             foreach (var argument in new[] { "/D", "/K", string.Join(" ", arguments) }) info.ArgumentList.Add(argument);
@@ -53,8 +56,12 @@ internal static class NativeServices
         else
         {
             var shell = FindExecutable("pwsh.exe") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe");
-            var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(Commands.PowerShellScript(session, executable)));
-            if (terminal == "Windows Terminal")
+            if (terminal == "Command Prompt")
+            {
+                info = new(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "cmd.exe"));
+                foreach (var argument in new[] { "/D", "/K", $"powershell.exe -NoProfile -EncodedCommand {encoded}" }) info.ArgumentList.Add(argument);
+            }
+            else if (terminal == "Windows Terminal")
             {
                 info = new(FindExecutable("wt.exe") ?? throw new InvalidOperationException("Windows Terminal was not found. Install it or choose PowerShell in Settings."));
                 foreach (var argument in new[] { "-w", "new", "new-tab", shell, "-NoExit", "-EncodedCommand", encoded }) info.ArgumentList.Add(argument);
@@ -69,14 +76,14 @@ internal static class NativeServices
         info.Environment["NoDefaultCurrentDirectoryInExePath"] = "1";
         Process.Start(info)?.Dispose();
     }
-    internal static void OpenEditor(Session session, string? editor)
+    internal static void OpenEditor(Session session, string? editor, string? resumeCommand = null)
     {
         var directory = RequireDirectory(session);
         if (editor == null || !File.Exists(editor)) throw new InvalidOperationException("Choose an installed editor executable (.exe) in Settings first.");
         var start = new ProcessStartInfo(editor) { UseShellExecute = false, WorkingDirectory = directory };
         start.ArgumentList.Add(directory);
         using var process = Process.Start(start) ?? throw new InvalidOperationException("The editor could not be started.");
-        Clipboard.SetText(session.Command);
+        Clipboard.SetText(resumeCommand ?? session.Command);
     }
     internal static Task<string> ReadScreenshot(string file) => Task.Run(() =>
     {

@@ -5,6 +5,7 @@ namespace Reprise.Windows;
 internal sealed class LibraryWindow : Form
 {
     private readonly SessionStore store;
+    private readonly ModelSelectionStore routing;
     private readonly NotifyIcon tray;
     private readonly System.Windows.Forms.Timer timer = new() { Interval = 30_000 };
     private readonly ListBox projects = new() { Dock = DockStyle.Fill, DrawMode = DrawMode.OwnerDrawFixed, ItemHeight = 82, BorderStyle = BorderStyle.None, IntegralHeight = false };
@@ -27,12 +28,13 @@ internal sealed class LibraryWindow : Form
     internal LibraryWindow(SessionStore store, bool smoke = false)
     {
         this.store = store;
+        routing = new(store.DataDirectory, Path.Combine(AppContext.BaseDirectory, "reprise-agent.exe"));
         Text = "Reprise"; Font = new Font("Segoe UI", 10); BackColor = Theme.Paper; ForeColor = Theme.Ink;
         Icon = NativeServices.LoadIcon(); MinimumSize = new Size(860, 640); Size = new Size(1040, 760); StartPosition = FormStartPosition.CenterScreen;
         AutoScaleMode = AutoScaleMode.Dpi;
-        resume = Theme.Button("Resume", (_, _) => Act(() => NativeServices.Resume(CurrentSession!, store.Preferences.Terminal)), true);
+        resume = Theme.Button("Resume", async (_, _) => await ResumeCurrent(), true);
         editor = Theme.Button("Open in editor", (_, _) => OpenCurrentEditor());
-        copy = Theme.Button("Copy command", (_, _) => Act(() => { Clipboard.SetText(CurrentSession!.Command); message.Text = "Resume command copied."; }));
+        copy = Theme.Button("Copy command", (_, _) => Act(() => { Clipboard.SetText(routing.ClipboardCommand(CurrentSession!)); message.Text = routing.Managed(CurrentSession!) ? "Managed-session command copied for PowerShell." : "Resume command copied."; }));
         edit = Theme.Button("Rename / edit", (_, _) => ShowCapture(CurrentSession));
         remove = Theme.Button("Remove session", (_, _) =>
         {
@@ -133,6 +135,21 @@ internal sealed class LibraryWindow : Form
         {
             var menu = new ContextMenuStrip();
             menu.Items.Add("Rename / edit session…", null, (_, _) => edit.PerformClick());
+            menu.Items.Add("Copy original CLI command", null, (_, _) => Act(() => { if (CurrentSession is { } s) Clipboard.SetText(s.Command); }));
+            if (CurrentSession is { } selected && routing.Preferences.Enabled)
+            {
+                var work = new ToolStripMenuItem("Automatic selection · work type");
+                var key = ProjectPaths.Normalize(selected.ProjectDirectory);
+                if (key != null) {
+                    foreach (var kind in ModelSelectionStore.WorkKinds) {
+                        var item = new ToolStripMenuItem(kind.Label) { Checked = routing.Preferences.WorkHints.GetValueOrDefault(key, "automatic") == kind.Id };
+                        item.Click += (_, _) => Act(() => { routing.Preferences.WorkHints[key] = kind.Id; routing.Save(); }); work.DropDownItems.Add(item);
+                    }
+                    var enabled = new ToolStripMenuItem("Use for this project") { Checked = !routing.Preferences.DisabledProjects.Contains(key) };
+                    enabled.Click += (_, _) => Act(() => { if (enabled.Checked) routing.Preferences.DisabledProjects.Add(key); else routing.Preferences.DisabledProjects.Remove(key); routing.Save(); ShowSession(); });
+                    work.DropDownItems.Add(new ToolStripSeparator()); work.DropDownItems.Add(enabled); menu.Items.Add(work);
+                }
+            }
             menu.Items.Add("Remove from library", null, (_, _) => remove.PerformClick()); menu.Show(more, new Point(0, more.Height));
         };
         heading.Controls.Add(more, 1, 0);
@@ -165,12 +182,13 @@ internal sealed class LibraryWindow : Form
     {
         if (settingsWindow == null)
         {
-            settingsWindow = new Form { Text = "Reprise Settings", Icon = Icon, Font = Font, ClientSize = new Size(440, 410), FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false, StartPosition = FormStartPosition.CenterParent, BackColor = Theme.Paper };
+            settingsWindow = new Form { Text = "Reprise Settings", Icon = Icon, Font = Font, ClientSize = new Size(440, 470), FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false, StartPosition = FormStartPosition.CenterParent, BackColor = Theme.Paper };
             var form = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(24), FlowDirection = FlowDirection.TopDown, WrapContents = false };
             var automatic = new CheckBox { Text = "Automatically save local sessions", AutoSize = true, Checked = store.Preferences.AutoDiscovery, Margin = new Padding(0, 0, 0, 20) };
             automatic.CheckedChanged += async (_, _) => { Act(() => { store.Preferences.AutoDiscovery = automatic.Checked; store.SavePreferences(); }); if (automatic.Checked) await Sync(); };
             form.Controls.Add(automatic); form.Controls.Add(Theme.Label("Default terminal", 10, true)); terminal.Width = 360; form.Controls.Add(terminal);
             form.Controls.Add(Theme.Label("Default editor", 10, true)); chooseEditor.Width = 360; chooseEditor.AutoSize = false; form.Controls.Add(chooseEditor);
+            form.Controls.Add(Theme.Button("Automatic model selection…", (_, _) => { using var window = new ModelSelectionWindow(routing); window.ShowDialog(this); ShowSession(); }));
             form.Controls.Add(Theme.Label("Updates", 10, true)); form.Controls.Add(update);
             form.Controls.Add(Theme.Button("Restore removed sessions", async (_, _) => { Act(store.RestoreRemoved); await Sync(); }));
             form.Controls.Add(Theme.Button("Open data folder", (_, _) => NativeServices.OpenUrl(store.DataDirectory)));
@@ -230,7 +248,7 @@ internal sealed class LibraryWindow : Form
         title.Text = CurrentProject?.Name ?? "Your next session belongs here";
         path.Text = CurrentProject?.Directory ?? "Add a screenshot, enter a command, or sync local Codex, Claude, and Grok sessions.";
         command.Text = session?.Command ?? ""; note.Text = session?.Note ?? ""; origin.Text = session == null ? "" : $"Source: {session.Origin} · {(session.DetectedAutomatically ? "Automatically saved" : "Screenshot / manual")}";
-        resume.Text = "Resume"; resume.AccessibleDescription = "Resume in " + terminal.Text;
+        resume.Text = session != null && routing.Managed(session) ? "Resume with Auto" : "Resume"; resume.AccessibleDescription = "Resume in " + terminal.Text;
         var selectedEditor = store.Preferences.EditorPath ?? NativeServices.DefaultEditor();
         editor.Text = selectedEditor == null ? "Choose editor…" : "Open in " + NativeServices.EditorName(selectedEditor);
         if (session?.HasLocalHistory == false) message.Text = "History is not on this PC. Open this conversation in Codex, then sync.";
@@ -272,8 +290,23 @@ internal sealed class LibraryWindow : Form
                 if (picker.ShowDialog(this) != DialogResult.OK) return;
                 selected = picker.FileName; SelectEditor(selected);
             }
-            NativeServices.OpenEditor(session, selected); message.Text = "Project opened. Resume command copied.";
+            NativeServices.OpenEditor(session, selected, routing.ClipboardCommand(session)); message.Text = "Project opened. Resume command copied.";
         });
+    }
+    private async Task ResumeCurrent()
+    {
+        if (CurrentSession is not { } session) return;
+        resume.Enabled = false;
+        try {
+            NativeServices.RequireDirectory(session);
+            if (routing.Managed(session)) NativeServices.Resume(session, store.Preferences.Terminal, routing.ManagedArguments(session));
+            else {
+                SelectionDecision? decision = null;
+                if (routing.Eligible(session)) { message.Text = "Checking usage and project structure…"; await routing.Refresh(session.Model); decision = await routing.Plan(session); }
+                NativeServices.Resume(session, store.Preferences.Terminal, decision: decision);
+            }
+        } catch (Exception error) { MessageBox.Show(this, error.Message, "Resume session", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+        finally { if (!IsDisposed) ShowSession(); }
     }
     private async Task Sync()
     {

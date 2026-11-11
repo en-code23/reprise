@@ -7,7 +7,7 @@ on:
       version:
         description: "Release version (major.minor.patch)"
         required: true
-        default: "1.8.0"
+        default: "1.9.0"
 permissions:
   contents: read
 jobs:
@@ -33,6 +33,11 @@ jobs:
       - uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: latest-stable
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - name: Test managed sessions
+        run: cargo test --locked --manifest-path runner/Cargo.toml
       - name: Build universal Mac app
         env:
           VERSION: ${{ needs.version.outputs.value }}
@@ -59,6 +64,7 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      - uses: dtolnay/rust-toolchain@stable
       - name: Build and test Windows installer
         env:
           VERSION: ${{ needs.version.outputs.value }}

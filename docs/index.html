@@ -28,7 +28,7 @@
       content="https://en-code23.github.io/reprise/assets/library-light.png"
     />
     <link rel="icon" href="assets/reprise-icon.png?v=1.5.1" />
-    <link rel="stylesheet" href="styles.css?v=1.8.0" />
+    <link rel="stylesheet" href="styles.css?v=1.9.0" />
   </head>
   <body>
     <header class="navigation wrap">
@@ -108,7 +108,7 @@
           </div>
           <img
             id="app-preview"
-            src="assets/library-light.png?v=1.8.0"
+            src="assets/library-light.png?v=1.9.0"
             alt="Reprise project library: five project folders, with 18 Billing portal sessions grouped into one row and a Resume in Terminal action."
             width="1040"
             height="720"
@@ -267,6 +267,20 @@
             </p>
           </details>
           <details>
+            <summary>Can Reprise choose models and effort automatically?</summary>
+            <p>
+              Yes, optionally. Enable Automatic model selection in Settings. Managed
+              terminal sessions choose within the conversation’s provider and can switch
+              between turns, using project structure, task wording, available quota,
+              and reset times. Normally effort stays at high or below. Fable needs its
+              separate allowance and shared weekly capacity; Claude usage requires
+              connecting its existing CLI login. Unknown usage uses a conservative choice.
+              Grok plan percentages are not available on every account. This is a local
+              heuristic, with manual overrides. Existing native CLI windows are not controlled.
+              <a href="https://github.com/en-code23/reprise#optional-automatic-model-selection">Read how selection works.</a>
+            </p>
+          </details>
+          <details>
             <summary>Can Reprise update itself?</summary>
             <p>
               From v1.5.0, Check for updates in Settings or the menubar options
@@ -313,6 +327,6 @@
         >MIT License</a
       >
     </footer>
-    <script src="app.js?v=1.8.0"></script>
+    <script src="app.js?v=1.9.0"></script>
   </body>
 </html>

@@ -2,9 +2,9 @@ name: Test Windows App
 on:
   push:
     branches: [main, windows-native]
-    paths: ["windows/**", "scripts/build-windows.ps1", ".github/workflows/windows.yml"]
+    paths: ["windows/**", "runner/**", "scripts/build-windows.ps1", "scripts/runner-licenses.py", ".github/workflows/windows.yml"]
   pull_request:
-    paths: ["windows/**", "scripts/build-windows.ps1", ".github/workflows/windows.yml"]
+    paths: ["windows/**", "runner/**", "scripts/build-windows.ps1", "scripts/runner-licenses.py", ".github/workflows/windows.yml"]
   workflow_dispatch:
 permissions:
   contents: read
@@ -16,9 +16,10 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      - uses: dtolnay/rust-toolchain@stable
       - name: Build, test, render, and package
         shell: pwsh
-        run: ./scripts/build-windows.ps1 -Version 1.8.0 -TestInstaller
+        run: ./scripts/build-windows.ps1 -Version 1.9.0 -TestInstaller
       - name: Upload Windows installer and previews
         if: always()
         uses: actions/upload-artifact@v4

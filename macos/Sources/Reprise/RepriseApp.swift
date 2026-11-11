@@ -3,6 +3,7 @@ import AppKit
 @main
 struct RepriseApp {
     @MainActor static func main() {
+        if RoutingCommandLine.handle(CommandLine.arguments) { return }
         let app = NSApplication.shared
         let delegate = AppDelegate()
         app.delegate = delegate

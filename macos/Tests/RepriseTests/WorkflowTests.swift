@@ -105,7 +105,7 @@ final class WorkflowTests: XCTestCase {
             ("library-dark-compact", NSSize(width: 940, height: 660), NSAppearance.Name.darkAqua),
             ("library-dark-minimum", NSSize(width: 860, height: 600), NSAppearance.Name.darkAqua)
         ] {
-            let view = NSHostingView(rootView: LibraryView(store: store, newCapture: {}).environment(\.locale, Locale(identifier: "en_US")))
+            let view = NSHostingView(rootView: LibraryView(store: store, newCapture: {}, routing: RoutingStore(directory: directory.appendingPathComponent("routing"))).environment(\.locale, Locale(identifier: "en_US")))
             view.frame = NSRect(origin: .zero, size: size)
             view.appearance = NSAppearance(named: appearance)
             let window = NSWindow(contentRect: view.frame, styleMask: [.borderless], backing: .buffered, defer: false)
@@ -119,8 +119,8 @@ final class WorkflowTests: XCTestCase {
             try data.write(to: URL(fileURLWithPath: output).appendingPathComponent("\(name).png"))
             window.orderOut(nil)
         }
-        let settings = NSHostingView(rootView: RepriseSettingsView(store: store))
-        settings.frame = NSRect(x: 0, y: 0, width: 520, height: 520)
+        let settings = NSHostingView(rootView: RepriseSettingsView(store: store, routing: RoutingStore(directory: directory.appendingPathComponent("routing"))))
+        settings.frame = NSRect(x: 0, y: 0, width: 520, height: 620)
         let settingsWindow = NSWindow(contentRect: settings.frame, styleMask: [.borderless], backing: .buffered, defer: false)
         settingsWindow.contentView = settings
         settings.layoutSubtreeIfNeeded()
@@ -130,6 +130,27 @@ final class WorkflowTests: XCTestCase {
         try XCTUnwrap(settingsBitmap.representation(using: .png, properties: [:]))
             .write(to: URL(fileURLWithPath: output).appendingPathComponent("settings.png"))
         settingsWindow.orderOut(nil)
+        let routingDirectory = directory.appendingPathComponent("routing-preview")
+        try FileManager.default.createDirectory(at: routingDirectory, withIntermediateDirectories: true)
+        var routingPreferences = RoutingPreferences(); routingPreferences.enabled = true
+        let routingState = ProviderRoutingState(provider: .codex,
+            models: [RoutingModel(id: "gpt-6.1-sol", name: "GPT Sol", role: .strong, efforts: ["low", "medium", "high"])],
+            windows: [QuotaWindow(id: "short", label: "Codex · five-hour window", usedPercent: 26, resetsAt: Date().addingTimeInterval(7200), durationMinutes: 300, observedAt: .now),
+                      QuotaWindow(id: "weekly", label: "Codex · weekly window", usedPercent: 42, resetsAt: Date().addingTimeInterval(86400 * 3), durationMinutes: 10080, observedAt: .now)], observedAt: .now, status: "Usage refreshed from Codex.", subscription: true)
+        struct RoutingFixture: Encodable { let preferences: RoutingPreferences; let states: [ProviderRoutingState]; let claudeConnected = false; let fableWindowID = "" }
+        let routingEncoder = JSONEncoder(); routingEncoder.dateEncodingStrategy = .secondsSince1970
+        try routingEncoder.encode(RoutingFixture(preferences: routingPreferences, states: [routingState])).write(to: routingDirectory.appendingPathComponent("model-routing.json"))
+        let routing = RoutingStore(directory: routingDirectory)
+        let routingView = NSHostingView(rootView: RoutingSettingsView(routing: routing))
+        routingView.frame = NSRect(x: 0, y: 0, width: 660, height: 650)
+        routingView.appearance = NSAppearance(named: .aqua)
+        let routingWindow = NSWindow(contentRect: routingView.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+        routingWindow.contentView = routingView; routingView.layoutSubtreeIfNeeded()
+        RunLoop.main.run(until: Date().addingTimeInterval(0.25))
+        let routingBitmap = try XCTUnwrap(routingView.bitmapImageRepForCachingDisplay(in: routingView.bounds))
+        routingView.cacheDisplay(in: routingView.bounds, to: routingBitmap)
+        try XCTUnwrap(routingBitmap.representation(using: .png, properties: [:])).write(to: URL(fileURLWithPath: output).appendingPathComponent("model-selection.png"))
+        routingWindow.orderOut(nil)
         let capture = CaptureCoordinator(store: store)
         for name in ["capture-idle", "capture-review"] {
             if name == "capture-review" {

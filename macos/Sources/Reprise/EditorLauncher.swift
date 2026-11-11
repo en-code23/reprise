@@ -19,7 +19,7 @@ struct EditorOpenRequest: Equatable {
     let application: URL
     let resumeCommand: String
 
-    init(session: ResumeSession, application: URL) throws {
+    init(session: ResumeSession, application: URL, resumeCommand: String? = nil) throws {
         guard let directory = session.projectDirectory, !directory.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw EditorLaunchError.missingDirectory
         }
@@ -30,18 +30,19 @@ struct EditorOpenRequest: Equatable {
         }
         self.directory = URL(fileURLWithPath: path, isDirectory: true)
         self.application = application
-        resumeCommand = CommandParser.canonicalize(session.command)
+        self.resumeCommand = resumeCommand ?? CommandParser.canonicalize(session.command)
     }
 }
 
 @MainActor
 enum EditorLauncher {
     static func open(_ session: ResumeSession, editor: CodeEditor?,
+        resumeCommand: String? = nil,
         openApplication: ((EditorOpenRequest) async throws -> Void)? = nil,
         copyCommand: ((String) -> Void)? = nil) async throws {
         guard let editor else { throw EditorLaunchError.noEditor }
         guard let application = editor.applicationURL else { throw EditorLaunchError.notInstalled(editor.name) }
-        let request = try EditorOpenRequest(session: session, application: application)
+        let request = try EditorOpenRequest(session: session, application: application, resumeCommand: resumeCommand)
         if let openApplication { try await openApplication(request) }
         else {
             let configuration = NSWorkspace.OpenConfiguration()

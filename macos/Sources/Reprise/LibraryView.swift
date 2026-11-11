@@ -44,6 +44,7 @@ struct LibraryView: View {
     @State private var copied = false
     @State private var showDetails = false
     @ObservedObject private var editorPreference = EditorPreference.shared
+    @ObservedObject var routing: RoutingStore = .shared
     @AppStorage(TerminalPreference.key) private var terminalRaw = TerminalApp.terminal.rawValue
     private var terminal: TerminalApp { TerminalApp(rawValue: terminalRaw) ?? .terminal }
     private var groups: [ProjectGroup] {
@@ -82,6 +83,12 @@ struct LibraryView: View {
         }
         .onChange(of: projectID) { _, _ in sessionID = nil; copied = false; editorStatus = nil }
         .onChange(of: sessionID) { _, _ in copied = false; editorStatus = nil }
+        .task {
+            while !Task.isCancelled {
+                routing.readRunnerCaches()
+                try? await Task.sleep(for: .seconds(5))
+            }
+        }
     }
 
     private var projectSidebar: some View {
@@ -191,12 +198,16 @@ struct LibraryView: View {
                             .disabled(launching || session.hasLocalHistory == false).keyboardShortcut(.return, modifiers: .command)
                         Button(copied ? "Copied" : "Copy command") { copy(session) }
                             .controlSize(.large)
+                            .help(routing.usesManagedSession(session) ? "Copy the managed-session command for automatic switching" : "Copy the saved CLI command")
                         Button { openInEditor(session, project: project) } label: {
                             Text(openingEditor ? "Opening…" : "Open in \(editorPreference.selected?.name ?? "editor")")
                         }.controlSize(.large).disabled(openingEditor)
                             .help("Opens the folder and copies this session’s resume command")
                     }.font(.system(size: 12))
                     if let editorStatus { Text(editorStatus).font(.system(size: 11)).foregroundStyle(.secondary) }
+                    if routing.preferences.enabled, project.directory != nil {
+                        ProjectRoutingView(routing: routing, session: session)
+                    }
                     if session.hasLocalHistory == false {
                         Text("History is not on this Mac. Open this conversation in Codex to make it available locally.")
                             .font(.system(size: 12)).foregroundStyle(.secondary)
@@ -260,6 +271,9 @@ struct LibraryView: View {
         Menu {
             Button("Rename session…") { editing = session }
             Button("Edit details…") { editing = session }
+            Button("Copy original CLI command") {
+                NSPasteboard.general.clearContents(); NSPasteboard.general.setString(session.command, forType: .string)
+            }
             Button("Choose project folder…") { chooseDirectory(project) }
             if let directory = project.directory {
                 Button("Show in Finder") { NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: directory) }
@@ -274,7 +288,10 @@ struct LibraryView: View {
         NSApp.sendAction(NSSelectorFromString("showPreferences:"), to: nil, from: nil)
     }
     private func copy(_ session: ResumeSession) {
-        NSPasteboard.general.clearContents(); NSPasteboard.general.setString(session.command, forType: .string)
+        let command: String
+        do { command = try ManagedSessionCommand.clipboardCommand(for: session, routing: routing) }
+        catch { errorMessage = error.localizedDescription; return }
+        NSPasteboard.general.clearContents(); NSPasteboard.general.setString(command, forType: .string)
         copied = true
         Task { try? await Task.sleep(for: .seconds(1.5)); copied = false }
     }
@@ -303,7 +320,8 @@ struct LibraryView: View {
         Task {
             defer { openingEditor = false }
             do {
-                try await EditorLauncher.open(session, editor: editor)
+                let command = try ManagedSessionCommand.clipboardCommand(for: session, routing: routing)
+                try await EditorLauncher.open(session, editor: editor, resumeCommand: command)
                 if projectID == project.id { editorStatus = "Project opened. Resume command copied." }
             } catch { errorMessage = error.localizedDescription }
         }

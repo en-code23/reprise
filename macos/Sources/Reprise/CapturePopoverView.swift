@@ -304,6 +304,8 @@ private struct ScreenshotPreview: View {
 
 private struct CompactSessionRow: View {
     let session: ResumeSession
+    @ObservedObject private var routing = RoutingStore.shared
+    @State private var copyError: String?
 
     var body: some View {
         HStack(spacing: 9) {
@@ -323,8 +325,11 @@ private struct CompactSessionRow: View {
             }
             Spacer()
             Button {
+                do {
+                let command = try ManagedSessionCommand.clipboardCommand(for: session, routing: routing)
                 NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(session.command, forType: .string)
+                NSPasteboard.general.setString(command, forType: .string)
+                } catch { copyError = error.localizedDescription }
             } label: {
                 Image(systemName: "doc.on.doc")
             }
@@ -332,5 +337,6 @@ private struct CompactSessionRow: View {
             .accessibilityLabel("Copy resume command")
             .help("Copy resume command")
         }
+        .alert("Could not copy command", isPresented: Binding(get: { copyError != nil }, set: { if !$0 { copyError = nil } })) { Button("OK") { copyError = nil } } message: { Text(copyError ?? "") }
     }
 }
