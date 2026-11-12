@@ -125,6 +125,7 @@ impl Agent {
                         false,
                     )
                     .await?;
+                a.state = providers::codex(&a.catalog, &Value::Null, policy::now());
                 let loaded = a
                     .call(
                         "thread/resume",
@@ -796,7 +797,7 @@ pub async fn run(request: Request) -> Result<()> {
     lock.try_lock_exclusive()
         .map_err(|_| "This conversation is already open in another Reprise managed session.")?;
     println!(
-        "Reprise · {} managed session\n{}\n\nModels are chosen between turns. Commands: /usage, /work auto|ui|backend|foundation|small,\n/model <id> [effort], /auto on|off, /quit. Ctrl+C stops the active turn.\n",
+        "Reprise · {} managed session\n{}\n\nModel selection follows your Reprise settings. Completion actions are controlled by the Mac app.\nCommands: /usage, /work auto|ui|backend|foundation|small, /model <id> [effort],\n/auto on|off, /quit. Ctrl+C stops the active turn.\n",
         request.provider,
         request.directory.display()
     );
@@ -804,7 +805,9 @@ pub async fn run(request: Request) -> Result<()> {
     println!("Connecting to the existing conversation…");
     let mut agent = Agent::connect(&request, &console).await?;
     let initial = providers::settings(&request.config_path)?;
-    agent.usage(&request, &initial, &console).await;
+    if initial.preferences.enabled {
+        agent.usage(&request, &initial, &console).await;
+    }
     let mut override_auto: Option<bool> = None;
     let mut work: Option<String> = None;
     let mut manual: Option<(String, String)> = None;
@@ -891,7 +894,9 @@ pub async fn run(request: Request) -> Result<()> {
             continue;
         }
         let config = providers::settings(&request.config_path)?;
-        agent.usage(&request, &config, &console).await;
+        if override_auto.unwrap_or(config.preferences.enabled) {
+            agent.usage(&request, &config, &console).await;
+        }
         let dir = request.directory.clone();
         let project = tokio::task::spawn_blocking(move || providers::assess(&dir))
             .await
