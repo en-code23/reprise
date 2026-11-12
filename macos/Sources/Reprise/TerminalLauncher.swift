@@ -50,7 +50,7 @@ enum TerminalLauncher {
         _ = try TerminalCommand.build(for: session)
         let routing = RoutingStore.shared
         let command: String
-        if routing.usesManagedSession(session) {
+        if routing.usesManagedSession(session) || FinishController.shared.usesManagedSession(session) {
             let arguments = try ManagedSessionCommand.arguments(for: session, routing: routing)
             let path = (session.projectDirectory! as NSString).expandingTildeInPath
             command = "cd -- \(TerminalCommand.quote(path)) && " + arguments.map(TerminalCommand.quote).joined(separator: " ")

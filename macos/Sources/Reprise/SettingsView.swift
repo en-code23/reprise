@@ -12,7 +12,7 @@ final class SettingsWindowController {
             let window = NSWindow(contentViewController: controller)
             window.title = "Reprise Settings"
             window.styleMask = [.titled, .closable]
-            window.setContentSize(NSSize(width: 520, height: 620))
+            window.setContentSize(NSSize(width: 520, height: 680))
             window.isReleasedWhenClosed = false
             window.center()
             self.window = window
@@ -26,6 +26,8 @@ struct RepriseSettingsView: View {
     @ObservedObject var store: SessionStore
     @ObservedObject var routing: RoutingStore = .shared
     @State private var showRouting = false
+    @ObservedObject var finish: FinishController = .shared
+    @State private var showFinish = false
     var body: some View {
         Form {
             Section("Sessions") {
@@ -36,6 +38,11 @@ struct RepriseSettingsView: View {
             Section("Open projects") {
                 LabeledContent("Default terminal") { TerminalPreferencePicker().labelsHidden() }
                 LabeledContent("Default editor") { EditorPreferenceMenu() }
+                LabeledContent("When finished") {
+                    Button(finish.armed ? finish.summary : "Choose action…") { showFinish = true }
+                        .lineLimit(1).help("Optional sleep, notification, screen lock, or Shortcut")
+                }
+                if finish.armed { Button("Cancel completion action", role: .cancel) { finish.cancel() } }
             }
             Section("Model selection") {
                 Toggle("Choose model and effort automatically", isOn: $routing.preferences.enabled)
@@ -46,7 +53,8 @@ struct RepriseSettingsView: View {
                 CheckForUpdatesButton()
                 Text(store.syncMessage).font(.caption).foregroundStyle(.secondary)
             }
-        }.formStyle(.grouped).padding(12).frame(width: 520, height: 620)
+        }.formStyle(.grouped).padding(12).frame(width: 520, height: 680)
             .sheet(isPresented: $showRouting) { RoutingSettingsView(routing: routing) }
+            .sheet(isPresented: $showFinish) { FinishSettingsView(controller: finish) }
     }
 }

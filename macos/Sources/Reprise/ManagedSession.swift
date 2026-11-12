@@ -31,8 +31,8 @@ enum ManagedSessionCommand {
         let encoded = try JSONEncoder().encode(request).base64EncodedString()
         return [runner.path, "run", "--request", encoded]
     }
-    static func clipboardCommand(for session: ResumeSession, routing: RoutingStore) throws -> String {
-        guard routing.usesManagedSession(session) else { return session.command }
+    static func clipboardCommand(for session: ResumeSession, routing: RoutingStore, finish: FinishController = .shared) throws -> String {
+        guard routing.usesManagedSession(session) || finish.usesManagedSession(session) else { return session.command }
         return try arguments(for: session, routing: routing).map(TerminalCommand.quote).joined(separator: " ")
     }
 }

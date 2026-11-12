@@ -38,6 +38,8 @@ struct LibraryView: View {
     @State private var editing: ResumeSession?
     @State private var removing: ResumeSession?
     @State private var errorMessage: String?
+    @State private var finishTarget: FinishTarget?
+    @ObservedObject var finish: FinishController = .shared
     @State private var launching = false
     @State private var openingEditor = false
     @State private var editorStatus: String?
@@ -60,6 +62,14 @@ struct LibraryView: View {
             projectSidebar.frame(minWidth: 240, idealWidth: 280, maxWidth: 340)
             VStack(spacing: 0) {
                 libraryToolbar
+                if finish.armed {
+                    HStack {
+                        Label(finish.summary, systemImage: "moon").lineLimit(1)
+                        Spacer()
+                        Button("Cancel action", role: .cancel) { finish.cancel() }
+                    }.font(.system(size: 12)).padding(.horizontal, 20).padding(.vertical, 8)
+                        .background(Color.repriseGreen.opacity(0.07))
+                }
                 Divider()
                 projectContent
                 if let error = store.storageError {
@@ -69,6 +79,9 @@ struct LibraryView: View {
             }.frame(minWidth: 480).background(Color.repriseSurface)
         }
         .sheet(item: $editing) { SessionEditor(session: $0) { store.update($0) } }
+        .sheet(isPresented: Binding(get: { finishTarget != nil }, set: { if !$0 { finishTarget = nil } })) {
+            FinishSettingsView(controller: finish, target: finishTarget, sessionName: session?.displayName)
+        }
         .alert("Remove this session?", isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } })) {
             Button("Cancel", role: .cancel) { removing = nil }
             Button("Remove", role: .destructive) { if let removing { store.delete(removing) }; removing = nil }
@@ -198,7 +211,7 @@ struct LibraryView: View {
                             .disabled(launching || session.hasLocalHistory == false).keyboardShortcut(.return, modifiers: .command)
                         Button(copied ? "Copied" : "Copy command") { copy(session) }
                             .controlSize(.large)
-                            .help(routing.usesManagedSession(session) ? "Copy the managed-session command for automatic switching" : "Copy the saved CLI command")
+                            .help(routing.usesManagedSession(session) || finish.usesManagedSession(session) ? "Copy the managed-session command" : "Copy the saved CLI command")
                         Button { openInEditor(session, project: project) } label: {
                             Text(openingEditor ? "Opening…" : "Open in \(editorPreference.selected?.name ?? "editor")")
                         }.controlSize(.large).disabled(openingEditor)
@@ -271,6 +284,9 @@ struct LibraryView: View {
         Menu {
             Button("Rename session…") { editing = session }
             Button("Edit details…") { editing = session }
+            if session.model != .other && session.isSubagent != true && session.hasLocalHistory != false {
+                Button("When this session finishes…") { finishTarget = FinishTarget(provider: session.model.rawValue, sessionId: session.sessionIdentifier) }
+            }
             Button("Copy original CLI command") {
                 NSPasteboard.general.clearContents(); NSPasteboard.general.setString(session.command, forType: .string)
             }
@@ -289,7 +305,7 @@ struct LibraryView: View {
     }
     private func copy(_ session: ResumeSession) {
         let command: String
-        do { command = try ManagedSessionCommand.clipboardCommand(for: session, routing: routing) }
+        do { command = try ManagedSessionCommand.clipboardCommand(for: session, routing: routing, finish: finish) }
         catch { errorMessage = error.localizedDescription; return }
         NSPasteboard.general.clearContents(); NSPasteboard.general.setString(command, forType: .string)
         copied = true

@@ -119,8 +119,9 @@ final class WorkflowTests: XCTestCase {
             try data.write(to: URL(fileURLWithPath: output).appendingPathComponent("\(name).png"))
             window.orderOut(nil)
         }
-        let settings = NSHostingView(rootView: RepriseSettingsView(store: store, routing: RoutingStore(directory: directory.appendingPathComponent("routing"))))
-        settings.frame = NSRect(x: 0, y: 0, width: 520, height: 620)
+        let finish = FinishController(directory: directory.appendingPathComponent("finish"), presentUI: false) { _ in XCTFail("Rendering must never execute a completion action") }
+        let settings = NSHostingView(rootView: RepriseSettingsView(store: store, routing: RoutingStore(directory: directory.appendingPathComponent("routing")), finish: finish))
+        settings.frame = NSRect(x: 0, y: 0, width: 520, height: 680)
         let settingsWindow = NSWindow(contentRect: settings.frame, styleMask: [.borderless], backing: .buffered, defer: false)
         settingsWindow.contentView = settings
         settings.layoutSubtreeIfNeeded()
@@ -130,6 +131,22 @@ final class WorkflowTests: XCTestCase {
         try XCTUnwrap(settingsBitmap.representation(using: .png, properties: [:]))
             .write(to: URL(fileURLWithPath: output).appendingPathComponent("settings.png"))
         settingsWindow.orderOut(nil)
+        finish.preferences.enabled = true; finish.preferences.action = .sleep
+        for (name, size, pending) in [("finish-settings", NSSize(width: 620, height: 640), false), ("finish-countdown", NSSize(width: 380, height: 220), true)] {
+            let view: NSView
+            if pending {
+                XCTAssertTrue(finish.arm(now: Date().addingTimeInterval(-1)))
+                finish.receive(FinishEvent(id: UUID().uuidString, provider: "codex", sessionId: identifier, turnId: "preview-turn", kind: .completed, source: "managed", occurredAt: Date().timeIntervalSince1970), uptime: ProcessInfo.processInfo.systemUptime)
+                view = NSHostingView(rootView: FinishCountdownView(controller: finish))
+            } else { view = NSHostingView(rootView: FinishSettingsView(controller: finish)) }
+            view.frame = NSRect(origin: .zero, size: size); view.appearance = NSAppearance(named: .aqua)
+            let window = NSWindow(contentRect: view.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+            window.contentView = view; view.layoutSubtreeIfNeeded(); RunLoop.main.run(until: Date().addingTimeInterval(0.25))
+            let bitmap = try XCTUnwrap(view.bitmapImageRepForCachingDisplay(in: view.bounds)); view.cacheDisplay(in: view.bounds, to: bitmap)
+            try XCTUnwrap(bitmap.representation(using: .png, properties: [:])).write(to: URL(fileURLWithPath: output).appendingPathComponent(name + ".png"))
+            window.orderOut(nil)
+        }
+        finish.cancel()
         let routingDirectory = directory.appendingPathComponent("routing-preview")
         try FileManager.default.createDirectory(at: routingDirectory, withIntermediateDirectories: true)
         var routingPreferences = RoutingPreferences(); routingPreferences.enabled = true

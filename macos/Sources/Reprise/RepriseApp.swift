@@ -3,6 +3,7 @@ import AppKit
 @main
 struct RepriseApp {
     @MainActor static func main() {
+        if FinishCommandLine.handle(CommandLine.arguments) { return }
         if RoutingCommandLine.handle(CommandLine.arguments) { return }
         let app = NSApplication.shared
         let delegate = AppDelegate()
@@ -28,6 +29,7 @@ struct RepriseApp {
             ("About Reprise", "orderFrontStandardAboutPanel:", ""),
             ("", "", ""),
             ("Settings…", "showPreferences:", ","),
+            ("Cancel armed completion action", "cancelFinishAction:", ""),
             ("", "", ""),
             ("Hide Reprise", "hide:", "h"),
             ("Show All", "unhideAllApplications:", ""),
@@ -85,10 +87,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.statusBarController = statusBar
         AppUpdater.shared.start()
         store.startDiscovery()
+        FinishController.shared.start(store: store)
         library.show()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        FinishController.shared.stop()
         store?.flush()
         store?.stopDiscovery()
         DistributedNotificationCenter.default().removeObserver(self)
@@ -110,6 +114,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func showPreferences(_ sender: Any?) {
         settingsWindowController?.show()
     }
+    @objc func cancelFinishAction(_ sender: Any?) { FinishController.shared.cancel() }
 
     private func becomePrimaryInstance() -> Bool {
         do {

@@ -1,4 +1,6 @@
 mod console;
+mod finish;
+mod finish_hooks;
 mod policy;
 mod providers;
 mod rpc;
@@ -11,6 +13,7 @@ async fn main() {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
     let result=async {
         match args.first().map(String::as_str){
+            Some("completion-hooks")=>{match finish_hooks::command(&args){Ok(message)=>{println!("{message}");Ok(())},Err(error)=>{println!("{error}");Err("The completion connection could not be updated.".into())}}},
             Some("run")=>{
                 let index=args.iter().position(|x|x=="--request").ok_or("Missing managed-session request.")?;
                 let encoded=args.get(index+1).filter(|s|s.len()<16384).ok_or("Invalid managed-session request.")?;

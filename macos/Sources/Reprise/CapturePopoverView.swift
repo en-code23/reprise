@@ -7,6 +7,7 @@ struct CapturePopoverView: View {
     @ObservedObject var store: SessionStore
     let openLibrary: () -> Void
     let quit: () -> Void
+    @ObservedObject var finish: FinishController = .shared
 
     var body: some View {
         VStack(spacing: 0) {
@@ -30,6 +31,14 @@ struct CapturePopoverView: View {
                 reviewActions.padding(.horizontal, 16).padding(.vertical, 10)
             }
             Divider()
+            if finish.armed {
+                HStack {
+                    Text(finish.summary).lineLimit(1)
+                    Spacer()
+                    Button("Cancel action", role: .cancel) { finish.cancel() }
+                }.font(.system(size: 12)).padding(12)
+                Divider()
+            }
             footer
         }
         .frame(width: 480, height: 620)

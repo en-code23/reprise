@@ -61,6 +61,10 @@ struct Agent {
     active_turn: Option<String>,
     streamed: bool,
     completed: bool,
+    successful: bool,
+    interrupted: bool,
+    background: std::collections::HashSet<String>,
+    finish: Option<crate::finish::Emitter>,
 }
 impl Agent {
     async fn connect(request: &Request, console: &Console) -> Result<Self> {
@@ -98,7 +102,14 @@ impl Agent {
             active_turn: None,
             streamed: false,
             completed: false,
+            successful: false,
+            interrupted: false,
+            background: Default::default(),
+            finish: Some(crate::finish::Emitter::new(request)),
         };
+        if let Some(finish) = &a.finish {
+            finish.emit("active", false, None);
+        }
         match request.provider.as_str() {
             "codex" => {
                 a.call("initialize",json!({"clientInfo":{"name":"reprise","title":"Reprise managed sessions","version":env!("CARGO_PKG_VERSION")}}),console,false).await?;
@@ -354,6 +365,9 @@ impl Agent {
         Ok(())
     }
     async fn interrupt(&self) {
+        if let Some(finish) = &self.finish {
+            finish.emit("cancelled", false, None);
+        }
         let h = self.rpc.handle.clone();
         match self.provider.as_str() {
             "codex" => {
@@ -384,12 +398,17 @@ impl Agent {
     async fn turn(&mut self, prompt: &str, decision: &Decision, console: &Console) -> Result<()> {
         self.streamed = false;
         self.completed = false;
+        self.successful = false;
+        self.interrupted = false;
+        if let Some(finish) = &mut self.finish {
+            finish.start();
+        }
         let packet = turn_request(&self.provider, &self.id, prompt, decision);
         if self.provider == "claude" {
             self.rpc.handle.send(packet).await?;
             loop {
                 tokio::select! {
-                    signal=tokio::signal::ctrl_c()=>{if signal.is_ok(){println!("\nStopping this turn…");self.interrupt().await;}},
+                    signal=tokio::signal::ctrl_c()=>{if signal.is_ok(){self.interrupted=true;println!("\nStopping this turn…");self.interrupt().await;}},
                     event=self.rpc.events.recv()=>{let event=event.ok_or("Claude disconnected.")?;if self.event(&event,console,true).await?{break;}}
                 }
             }
@@ -398,11 +417,12 @@ impl Agent {
             self.active_turn = started["turn"]["id"].as_str().map(String::from);
             if self.completed {
                 self.active_turn = None;
+                self.report_finished();
                 return Ok(());
             }
             loop {
                 tokio::select! {
-                    signal=tokio::signal::ctrl_c()=>{if signal.is_ok(){println!("\nStopping this turn…");self.interrupt().await;}},
+                    signal=tokio::signal::ctrl_c()=>{if signal.is_ok(){self.interrupted=true;println!("\nStopping this turn…");self.interrupt().await;}},
                     event=self.rpc.events.recv()=>{let event=event.ok_or("Codex disconnected.")?;if self.event(&event,console,true).await?{break;}}
                 }
             }
@@ -413,19 +433,120 @@ impl Agent {
             tokio::pin!(operation);
             loop {
                 tokio::select! {
-                    result=&mut operation=>{result?;break;},
-                    signal=tokio::signal::ctrl_c()=>{if signal.is_ok(){println!("\nStopping this turn…");self.interrupt().await;}},
+                    result=&mut operation=>{let result=result?;self.successful=result["stopReason"]=="end_turn";break;},
+                    signal=tokio::signal::ctrl_c()=>{if signal.is_ok(){self.interrupted=true;println!("\nStopping this turn…");self.interrupt().await;}},
                     event=self.rpc.events.recv()=>{let event=event.ok_or("Grok disconnected.")?;self.event(&event,console,true).await?;}
                 }
             }
         }
         self.active_turn = None;
+        self.report_finished();
         println!();
         Ok(())
     }
 
+    fn report_finished(&self) {
+        if let Some(finish) = &self.finish {
+            finish.emit(
+                if self.interrupted {
+                    "cancelled"
+                } else if self.successful {
+                    "completed"
+                } else {
+                    "failed"
+                },
+                !self.background.is_empty(),
+                None,
+            );
+        }
+    }
+
+    async fn read_prompt(&mut self, console: &Console) -> Result<Option<String>> {
+        let input = console.read("You › ", true);
+        tokio::pin!(input);
+        let mut requests = Vec::new();
+        loop {
+            tokio::select! {
+                line=&mut input=>{
+                    if line.as_deref().is_some_and(|s|!["/quit","/exit"].contains(&s.trim())) {
+                        for request in requests {self.event(&request,console,true).await?;}
+                    }
+                    return Ok(line);
+                },
+                event=self.rpc.events.recv()=>{
+                    let event=event.ok_or("The coding tool disconnected.")?;
+                    let asks=event["type"]=="control_request" || (event.get("id").is_some()&&event.get("method").is_some());
+                    if asks {
+                        if let Some(finish)=&self.finish {finish.emit("waiting",false,None);}
+                        if requests.len()>=32 {return Err("Too many pending input requests. Resume the session again.".into());}
+                        println!("\nThe assistant needs input. Press Enter to answer its request.");requests.push(event);
+                    }else{self.event(&event,console,true).await?;}
+                }
+            }
+        }
+    }
+
     async fn event(&mut self, event: &Value, console: &Console, render: bool) -> Result<bool> {
         let method = event["method"].as_str().unwrap_or("");
+        if self.provider == "codex"
+            && let Some(thread) = event["params"]["threadId"].as_str()
+            && thread != self.id
+        {
+            if method == "turn/started" {
+                self.background.insert(thread.into());
+                if let Some(finish) = &self.finish {
+                    finish.emit("childStarted", true, Some(thread));
+                }
+            } else if method == "turn/completed" {
+                self.background.remove(thread);
+                if let Some(finish) = &self.finish {
+                    finish.emit("childFinished", !self.background.is_empty(), Some(thread));
+                }
+                if self.completed && self.successful && self.background.is_empty() {
+                    self.report_finished();
+                }
+            }
+        }
+        if self.provider == "claude" && event["type"] == "system" {
+            if event["subtype"] == "task_started"
+                && let Some(id) = event["task_id"].as_str()
+            {
+                self.background.insert(id.into());
+                if let Some(finish) = &self.finish {
+                    finish.emit("childStarted", true, Some(id));
+                }
+            } else if event["subtype"] == "task_notification"
+                && let Some(id) = event["task_id"].as_str()
+            {
+                self.background.remove(id);
+                if let Some(finish) = &self.finish {
+                    finish.emit("childFinished", !self.background.is_empty(), Some(id));
+                }
+                if self.completed && self.successful && self.background.is_empty() {
+                    self.report_finished();
+                }
+            }
+        }
+        let asks = event.get("id").is_some()
+            && matches!(
+                method,
+                "item/commandExecution/requestApproval"
+                    | "item/fileChange/requestApproval"
+                    | "item/permissions/requestApproval"
+                    | "item/tool/requestUserInput"
+                    | "session/request_permission"
+            )
+            || (event["type"] == "control_request"
+                && matches!(
+                    event["request"]["subtype"].as_str(),
+                    Some("can_use_tool" | "elicitation")
+                ));
+        if render
+            && asks
+            && let Some(finish) = &self.finish
+        {
+            finish.emit("waiting", false, None);
+        }
         if self.provider == "claude" && event["type"] == "control_request" {
             let req = &event["request"];
             let subtype = req["subtype"].as_str().unwrap_or("");
@@ -575,6 +696,7 @@ impl Agent {
                 }
                 "turn/completed" => {
                     let turn = &event["params"]["turn"];
+                    self.successful = turn["status"] == "completed";
                     if turn["status"] == "failed" {
                         println!(
                             "\n{}",
@@ -620,6 +742,7 @@ impl Agent {
                     }
                 }
                 "result" => {
+                    self.successful = event["is_error"] != true && event["subtype"] == "success";
                     if event["is_error"] == true {
                         println!("\nThe turn failed. Check the provider's limits and CLI login.");
                     }
@@ -687,7 +810,7 @@ pub async fn run(request: Request) -> Result<()> {
     let mut manual: Option<(String, String)> = None;
     let mut last_kind: Option<String> = None;
     loop {
-        let Some(line) = console.read("You › ", true).await else {
+        let Some(line) = agent.read_prompt(&console).await? else {
             break;
         };
         let line = line.trim();
@@ -891,6 +1014,10 @@ mod tests {
             active_turn: None,
             streamed: false,
             completed: false,
+            successful: false,
+            interrupted: false,
+            background: Default::default(),
+            finish: None,
         };
         let console = Console::new();
         for id in ["strong", "everyday"] {

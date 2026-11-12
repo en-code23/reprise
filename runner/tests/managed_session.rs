@@ -8,6 +8,9 @@ use std::{
 };
 
 fn managed_turns(provider: &str) -> Vec<Value> {
+    managed_turns_with_outcome(provider, "success")
+}
+fn managed_turns_with_outcome(provider: &str, outcome: &str) -> Vec<Value> {
     let root = std::env::temp_dir().join(format!("reprise-managed-test-{}", uuid::Uuid::new_v4()));
     std::fs::create_dir_all(&root).unwrap();
     struct Cleanup(PathBuf);
@@ -36,6 +39,8 @@ fn managed_turns(provider: &str) -> Vec<Value> {
     )
     .unwrap();
     let config = root.join("model-routing.json");
+    std::fs::write(root.join("finish-actions.json"),json!({"enabled":true,"action":"none","delaySeconds":60,"shortcutName":"","providers":["codex","claude","grok"]}).to_string()).unwrap();
+    std::fs::write(root.join("finish-monitor.json"),json!({"updatedAt":std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs_f64()}).to_string()).unwrap();
     std::fs::write(&config,json!({"preferences":{"enabled":true,"modelRoles":{"grok:grok-test-frontier":3}},"states":[],"claudeConnected":false,"fableWindowID":""}).to_string()).unwrap();
     let session = uuid::Uuid::new_v4().to_string();
     let request = json!({"provider":provider,"sessionId":session,"directory":root,"configPath":config,"projectKey":root});
@@ -49,6 +54,7 @@ fn managed_turns(provider: &str) -> Vec<Value> {
         .args(["run", "--request", &encoded])
         .env("PATH", std::env::join_paths(paths).unwrap())
         .env("REPRISE_TEST_PROVIDER", provider)
+        .env("REPRISE_TEST_OUTCOME", outcome)
         .env("REPRISE_TEST_TRACE", root.join("trace.jsonl"))
         .env("CLAUDE_CONFIG_DIR", root.join("no-real-credentials"))
         .stdin(Stdio::piped())
@@ -99,6 +105,29 @@ fn managed_turns(provider: &str) -> Vec<Value> {
         .read_to_string(&mut errors)
         .unwrap();
     assert!(status.success(), "{output}\n{errors}");
+    let events = std::fs::read_dir(root.join("finish-events"))
+        .unwrap()
+        .map(|file| std::fs::read_to_string(file.unwrap().path()).unwrap())
+        .collect::<Vec<_>>();
+    let decoded = events
+        .iter()
+        .map(|text| serde_json::from_str::<Value>(text).unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        decoded.iter().filter(|e| e["kind"] == "completed").count(),
+        if outcome == "success" { 2 } else { 0 },
+        "{output}"
+    );
+    assert_eq!(decoded.iter().filter(|e| e["kind"] == "started").count(), 2);
+    for (text, event) in events.iter().zip(&decoded) {
+        assert_eq!(event["sessionId"], session);
+        assert_eq!(event["provider"], provider);
+        assert!(
+            !text.contains("database schema")
+                && !text.contains("UI layout")
+                && !text.contains("accessToken")
+        );
+    }
     let records = std::fs::read_to_string(root.join("trace.jsonl"))
         .unwrap()
         .lines()
@@ -139,6 +168,13 @@ fn managed_turns(provider: &str) -> Vec<Value> {
             .contains("accessToken")
     );
     records
+}
+
+#[test]
+fn failed_or_cancelled_turns_never_report_successful_completion() {
+    for provider in ["codex", "claude", "grok"] {
+        managed_turns_with_outcome(provider, "failed");
+    }
 }
 #[test]
 fn codex_managed_session_switches_for_new_work_without_changing_identity() {

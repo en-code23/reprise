@@ -41,7 +41,7 @@
     <key>SURequireSignedFeed</key>
     <true/>
     <key>NSAppleEventsUsageDescription</key>
-    <string>Reprise controls your chosen terminal app to open your project folder and resume the session you choose.</string>
+    <string>Reprise opens coding sessions in your chosen terminal. If you choose Lock screen as a completion action, it also asks System Events to send the Mac lock shortcut.</string>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSHumanReadableCopyright</key>

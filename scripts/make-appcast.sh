@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="${0:A:h:h}"
-VERSION="${VERSION:-1.9.1}"
+VERSION="${VERSION:-1.10.0}"
 ARCHIVE="$ROOT_DIR/dist/Reprise-$VERSION-macOS.zip"
 SPARKLE_BIN="$ROOT_DIR/macos/.build/artifacts/sparkle/Sparkle/bin"
 STAGING_DIR="$(mktemp -d "${TMPDIR:-/tmp}/reprise-appcast.XXXXXX")"

@@ -8,7 +8,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>Reprise</AssemblyName>
     <RootNamespace>Reprise.Windows</RootNamespace>
-    <Version>1.9.1</Version>
+    <Version>1.10.0</Version>
     <ApplicationIcon>Assets/Reprise.ico</ApplicationIcon>
     <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>

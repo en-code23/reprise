@@ -27,7 +27,7 @@ Windows sessions and preferences live in `%LOCALAPPDATA%\RepriseLibrary`, outsid
 Build on Windows with .NET 10, stable Rust, Python 3, and the Visual Studio C++ redistributable files available:
 
 ```powershell
-./scripts/build-windows.ps1 -Version 1.9.1
+./scripts/build-windows.ps1 -Version 1.10.0
 ```
 
 The script runs core checks, publishes a self-contained app, verifies its UI/OCR on Windows, and builds the installer and update packages with pinned Velopack tooling. `-TestInstaller` additionally installs and tests the package on a clean CI runner. Windows previews are saved under `build/windows/qa/`. Run the portable core checks on any .NET 10 host with `dotnet run --project windows/Reprise.Core.Tests -c Release`.
@@ -107,6 +107,28 @@ Grok Build currently does not expose plan quota percentages through `grok usage 
 Preferences are stored in `model-routing.json` alongside the library; metadata-only runner caches are under `routing-usage`. Original session data and per-project exclusions are preserved. The runner uses each provider’s existing approval and sandbox settings and asks before granting requested tool permissions. It does not enable bypass modes.
 
 The managed runner builds with `cargo build --locked --manifest-path runner/Cargo.toml`; run its protocol and policy tests with `cargo test --locked --manifest-path runner/Cargo.toml`. Mac release builds also need the `aarch64-apple-darwin` and `x86_64-apple-darwin` Rust targets. Packaged releases include the runner and dependency notices; users do not need Rust installed.
+
+## Optional “When finished” actions on Mac
+
+Open **Settings → Open projects → When finished → Choose action…**. Choose **Put Mac to sleep**, **Notify me**, **Lock screen**, or **Run a macOS Shortcut**, then click **Arm next completion**. The default is Do nothing. You can also use a selected session’s **… → When this session finishes…** menu to watch only that conversation.
+
+Arming runs the chosen action once, after a successful completed reply and once the other watched assistants are quiet. It does not mean the whole project is finished. Sleep, lock, and Shortcuts have a configurable 15-second to 10-minute countdown, with a 60-second default. Cancel from the floating countdown panel, the library banner, the menu-bar popup, Settings, or Reprise’s application menu. New work, a permission/input request, failure, or interruption stops a pending countdown. Starting a new successful turn can make an armed action eligible again. Cancel disarms it completely.
+
+Arming is never saved. It expires after running, quitting Reprise, or putting the Mac to sleep; a missed countdown is discarded on return. Changing completion preferences also cancels an armed action. Reprise’s sleep action requests normal macOS system sleep without changing power-management settings. No power action runs merely because a preference was saved or a connection was installed.
+
+Resuming a session while an applicable action is armed opens a Reprise-managed text terminal in the chosen terminal app, even if automatic model selection is off. The runner reports successful completion, failures, interruptions, input waits, and supported background-task activity directly. Managed sessions need no global CLI hooks. Existing managed terminals need to be reopened after upgrading to gain completion reporting.
+
+For sessions started outside Reprise, expand **Sessions started outside Reprise** and connect the relevant tool. Install Reprise in `/Applications` or `~/Applications` first. Connections respect `CODEX_HOME`, `CLAUDE_CONFIG_DIR`, and `GROK_HOME` when present in Reprise’s environment. Restart or reload existing clients after connecting. Codex additionally requires reviewing and trusting new Reprise hooks through `/hooks`; Reprise never bypasses that trust step. Clients that disable user hooks or do not load the configured settings cannot be monitored. Cloud-only chats are not supported.
+
+Codex uses its post-turn `notify` callback, while lifecycle hooks report activity and input waits. An existing Codex notify command is forwarded with its original arguments and notification payload; Disconnect restores it if the user has not replaced it since connecting. Claude and Grok Stop hooks are treated as tentative: their idle notification confirms completion, normally about a minute later. A Stop gate, subagent result, permission request, cancelled turn, or API error is not treated as successful completion. Only verified local main-session identities are eligible; checking identities does not turn automatic library saving on. Reprise must remain open. See the [official Codex notification documentation](https://learn.chatgpt.com/docs/config-file/config-advanced), [Claude hooks reference](https://code.claude.com/docs/en/hooks), and [Grok hooks guide](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-pager/docs/user-guide/10-hooks.md).
+
+Connections merge only Reprise’s own command handlers into Codex `hooks.json` or Claude `settings.json`; Grok uses a dedicated `hooks/reprise-finish.json`. Existing hooks and permissions remain intact. Private backups are kept under Reprise’s `native-connections/backups`. Unreadable configuration is preserved rather than overwritten. Use Disconnect before uninstalling or moving Reprise, so callbacks do not point at a missing app.
+
+Screen lock uses the system Control–Command–Q shortcut. Its setup button requests System Events automation and opens Accessibility settings; allow Reprise there before arming screen lock. Notification permission can be granted explicitly in completion settings; without it, Reprise uses an in-app panel and sound. A chosen Shortcut runs by name using Apple’s `shortcuts` CLI, with no conversation or project files passed as input. Configure the Shortcut itself in the Shortcuts app. Countdown cancellation prevents an action from starting; it does not undo a Shortcut that has already begun.
+
+Completion preferences live in `finish-actions.json` beside the library. Hook helpers retain only session/turn identifiers, lifecycle states, and timestamps, never prompt or response text. A short-lived monitor lease stops event writes when Reprise is closed. The hooks themselves only enqueue metadata; they cannot execute a sleep, lock, or Shortcut action. Those actions are owned by the running app’s explicit, in-memory arm.
+
+These completion actions are currently Mac-only. Windows continues to support session management and model selection.
 
 ## In-app updates
 
