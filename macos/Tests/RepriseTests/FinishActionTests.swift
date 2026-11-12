@@ -103,6 +103,17 @@ final class FinishActionTests: XCTestCase {
         machine.receive(event(.completed, turn: "native-turn", offset: 2, source: "hook"), now: now + 2, uptime: 101)
         XCTAssertNil(machine.pending)
     }
+    func testUnwatchedAssistantsDoNotResetOrBlockTheCountdown() {
+        var prefs = preferences; prefs.providers = ["codex"]
+        var machine = FinishStateMachine(); XCTAssertTrue(machine.enable(prefs, target: nil, now: now))
+        machine.receive(event(.completed), now: now + 1, uptime: 100)
+        let deadline = machine.pending?.deadline
+        machine.receive(event(.started, provider: "grok", offset: 2), now: now + 2, uptime: 110)
+        XCTAssertEqual(machine.pending?.deadline, deadline)
+        machine.receive(event(.failed, provider: "claude", offset: 3), now: now + 3, uptime: 120)
+        XCTAssertEqual(machine.pending?.deadline, deadline)
+        XCTAssertNotNil(machine.takeDue(uptime: 160))
+    }
     func testHookPayloadFiltersSubagentsAndKeepsOnlyMetadata() throws {
         let payload: [String: Any] = ["session_id": session, "hook_event_name": "Stop", "last_assistant_message": "Private reply", "prompt": "Private task", "background_tasks": [["description": "Private process"]]]
         let event = try XCTUnwrap(FinishHookPayload.event(provider: "claude", payload: payload))

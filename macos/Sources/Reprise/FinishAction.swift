@@ -112,6 +112,8 @@ struct FinishStateMachine {
         handled.insert(event.id); order.append(event.id)
         if order.count > 4096 { handled.remove(order.removeFirst()) }
         let target = event.target
+        let affectsArm = arm?.preferences.providers.contains(event.provider) ?? true
+        let previousPending = pending
         let turnKey = event.turnId.map { target.key + ":" + $0 }
         if event.kind == .completed, let turnKey, completedTurns.contains(turnKey) { return }
         var activity = activities[target] ?? Activity()
@@ -157,6 +159,7 @@ struct FinishStateMachine {
             if let child = event.childId { activity.children.remove(child) }
         }
         activities[target] = activity
+        if !affectsArm { pending = previousPending; return }
         prepare(uptime: uptime)
     }
 
