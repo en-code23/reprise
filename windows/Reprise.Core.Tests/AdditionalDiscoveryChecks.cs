@@ -20,7 +20,7 @@ static class AdditionalDiscoveryChecks
         void Sql(string path, string sql)
         {
             var file = Path.Combine(root, path); Directory.CreateDirectory(Path.GetDirectoryName(file)!);
-            using var db = new SqliteConnection("Data Source=" + file); db.Open();
+            using var db = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = file, Pooling = false }.ToString()); db.Open();
             using var command = db.CreateCommand(); command.CommandText = sql; command.ExecuteNonQuery();
         }
         try

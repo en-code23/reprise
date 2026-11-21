@@ -1,6 +1,6 @@
 # Release notes
 
-## 1.11.0
+## 1.11.1
 
 - Add Gemini CLI, Moonshot/Kimi CLI, Kimi Code, Antigravity CLI, and OpenCode history detection on Mac and Windows, with native resume commands, copying, editor opening, assistant filters, and project grouping.
 - Cover older Gemini JSON and Kimi context files, current JSONL metadata, and both OpenCode database schemas plus pre-database JSON histories. Open databases read-only and keep metadata reads bounded.
