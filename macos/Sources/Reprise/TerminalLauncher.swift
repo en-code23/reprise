@@ -31,8 +31,8 @@ enum TerminalCommand {
         }
         let command = CommandParser.canonicalize(session.command)
         let parts = command.split(whereSeparator: { $0.isWhitespace }).map(String.init)
-        guard parts.count == 3, ["codex", "claude", "grok"].contains(parts[0]),
-              ["resume", "--resume"].contains(parts[1]),
+        guard parts.count == 3, let client = CommandParser.client(command), client != .other,
+              command == CommandParser.resumeCommand(model: client, identifier: parts[2]),
               parts[2].range(of: #"^[A-Za-z0-9][A-Za-z0-9_-]*$"#, options: .regularExpression) != nil else {
             throw TerminalLaunchError.invalidCommand
         }

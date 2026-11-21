@@ -26,6 +26,11 @@ extension AssistantModel {
         case .codex: .primary
         case .claude: Color(red: 0.71, green: 0.36, blue: 0.24)
         case .grok: Color(red: 0.27, green: 0.36, blue: 0.46)
+        case .gemini, .antigravity: Color(red: 0.25, green: 0.42, blue: 0.73)
+        case .moonshot: Color(red: 0.48, green: 0.40, blue: 0.64)
+        case .deepseek: Color(red: 0.23, green: 0.38, blue: 0.79)
+        case .glm: Color(red: 0.26, green: 0.50, blue: 0.48)
+        case .opencode: .primary
         case .other: .secondary
         }
     }

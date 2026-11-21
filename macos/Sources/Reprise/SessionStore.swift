@@ -43,6 +43,8 @@ final class SessionStore: ObservableObject {
             let detectedName = session.detectedName ?? previous.detectedName
             let isSubagent = session.isSubagent ?? previous.isSubagent
             let hasLocalHistory = session.hasLocalHistory ?? previous.hasLocalHistory
+            let assistantOverride = session.assistantOverride ?? previous.assistantOverride
+            let detectedAssistant = session.detectedAssistant ?? previous.detectedAssistant
             session = ResumeSession(id: sessions[index].id, model: session.model, project: session.project, name: name,
                 projectDirectory: session.projectDirectory, note: session.note, command: session.command,
                 createdAt: session.createdAt, sourceFileName: session.sourceFileName,
@@ -54,6 +56,9 @@ final class SessionStore: ObservableObject {
             session.detectedName = detectedName
             session.isSubagent = isSubagent
             session.hasLocalHistory = hasLocalHistory
+            session.assistantOverride = assistantOverride
+            session.detectedAssistant = detectedAssistant
+            session.model = session.assistantOverride ?? session.model
             sessions[index] = session
         } else { sessions.insert(session, at: 0) }
         save()
@@ -112,6 +117,11 @@ final class SessionStore: ObservableObject {
         var indices = Dictionary(sessions.enumerated().map { ($0.element.identityKey, $0.offset) }, uniquingKeysWith: { first, _ in first })
         for session in incoming where !dismissed.contains(session.identityKey) {
             if let index = indices[session.identityKey] {
+                if sessions[index].discoveryKey != nil, sessions[index].detectedAssistant != session.model || sessions[index].model != (sessions[index].assistantOverride ?? session.model) {
+                    sessions[index].detectedAssistant = session.model
+                    sessions[index].model = sessions[index].assistantOverride ?? session.model
+                    changed = true
+                }
                 if let history = session.hasLocalHistory, sessions[index].hasLocalHistory != history {
                     sessions[index].hasLocalHistory = history
                     changed = true

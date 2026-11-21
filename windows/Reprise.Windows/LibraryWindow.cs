@@ -10,7 +10,7 @@ internal sealed class LibraryWindow : Form
     private readonly System.Windows.Forms.Timer timer = new() { Interval = 30_000 };
     private readonly ListBox projects = new() { Dock = DockStyle.Fill, DrawMode = DrawMode.OwnerDrawFixed, ItemHeight = 82, BorderStyle = BorderStyle.None, IntegralHeight = false };
     private readonly DataGridView history = new() { ReadOnly = true, AllowUserToAddRows = false, AllowUserToDeleteRows = false, MultiSelect = false, SelectionMode = DataGridViewSelectionMode.FullRowSelect, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, BackgroundColor = Color.White, BorderStyle = BorderStyle.None, Height = 160 };
-    private readonly ComboBox model = Theme.Combo(["All assistants", "codex", "claude", "grok", "other"]);
+    private readonly ComboBox model = Theme.Combo(["All assistants", .. Commands.Models]);
     private readonly ComboBox source = Theme.Combo(["Main sessions", "All sources", .. NativeServices.Origins]);
     private readonly ComboBox terminal = Theme.Combo(NativeServices.Terminals);
     private readonly ComboBox libraryArea = Theme.Combo(["Projects", "Unassigned", "Internal"]);
@@ -231,7 +231,7 @@ internal sealed class LibraryWindow : Form
         if (CurrentProject is { } group)
             foreach (var session in group.Sessions)
             {
-                var index = history.Rows.Add(session.DisplayName, session.Model, session.HasLocalHistory == false ? "History not local" : session.Origin, session.CreatedAt.ToLocalTime().ToString("MMM d"));
+                var index = history.Rows.Add(session.DisplayName, session.Model, session.HasLocalHistory == false ? "History not local" : session.SourceLabel, session.CreatedAt.ToLocalTime().ToString("MMM d"));
                 history.Rows[index].Tag = session;
                 history.Rows[index].Cells[0].ToolTipText = session.DisplayName + "\n" + session.Command;
                 history.Rows[index].Cells[2].ToolTipText = session.Origin;
@@ -246,7 +246,7 @@ internal sealed class LibraryWindow : Form
         foreach (var button in new[] { resume, editor, copy, edit, remove }) button.Enabled = session != null;
         resume.Enabled = session != null && session.HasLocalHistory != false;
         title.Text = CurrentProject?.Name ?? "Your next session belongs here";
-        path.Text = CurrentProject?.Directory ?? "Add a screenshot, enter a command, or sync local Codex, Claude, and Grok sessions.";
+        path.Text = CurrentProject?.Directory ?? "Add a screenshot, enter a command, or sync local coding sessions.";
         command.Text = session?.Command ?? ""; note.Text = session?.Note ?? ""; origin.Text = session == null ? "" : $"Source: {session.Origin} · {(session.DetectedAutomatically ? "Automatically saved" : "Screenshot / manual")}";
         resume.Text = session != null && routing.Managed(session) ? "Resume with Auto" : "Resume"; resume.AccessibleDescription = "Resume in " + terminal.Text;
         var selectedEditor = store.Preferences.EditorPath ?? NativeServices.DefaultEditor();

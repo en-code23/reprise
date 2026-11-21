@@ -5,7 +5,9 @@ namespace Reprise.Windows;
 internal sealed class CaptureWindow : Form
 {
     private readonly Session original;
-    private readonly ComboBox model = Theme.Combo(["codex", "claude", "grok", "other"]);
+    private readonly bool editingExisting;
+    private string? parsedModel;
+    private readonly ComboBox model = Theme.Combo(Commands.Models);
     private readonly ComboBox source = Theme.Combo(["Automatic", .. NativeServices.Origins]);
     private readonly TextBox project = new(), name = new() { MaxLength = 200 }, directory = new(), command = new(), note = new();
     private readonly Label status = Theme.Label("Screenshots are read on this PC. Review the command before saving.");
@@ -15,6 +17,8 @@ internal sealed class CaptureWindow : Form
     internal CaptureWindow(Session? editing = null)
     {
         original = editing is null ? new Session() : editing with { };
+        editingExisting = editing != null;
+        if (editing != null) model.Items.Insert(0, "Automatic");
         if (editing != null) status.Text = "Leave the session name blank to use the imported name or session ID.";
         Text = editing == null ? "Add session — Reprise" : "Session details — Reprise";
         Font = new Font("Segoe UI", 10); BackColor = Theme.Paper; ForeColor = Theme.Ink;
@@ -51,7 +55,7 @@ internal sealed class CaptureWindow : Form
         project.Text = original.Project; directory.Text = original.ProjectDirectory ?? ""; command.Text = original.Command; note.Text = original.Note;
         name.Text = original.Name ?? "";
         if (editing != null) Shown += (_, _) => { name.Focus(); name.SelectAll(); };
-        model.SelectedItem = original.Model; source.SelectedItem = original.OriginOverride ?? "Automatic";
+        model.SelectedItem = editing == null ? original.Model : original.AssistantOverride ?? "Automatic"; source.SelectedItem = original.OriginOverride ?? "Automatic";
         AcceptButton = save;
     }
     private static void AddField(TableLayoutPanel layout, int row, string title, Control control)
@@ -67,6 +71,7 @@ internal sealed class CaptureWindow : Form
             var text = await NativeServices.ReadScreenshot(path);
             if (IsDisposed) return;
             var parsed = Commands.Parse(text);
+            parsedModel = parsed.Model;
             model.SelectedItem = parsed.Model; command.Text = parsed.Command;
             directory.Text = parsed.Directory ?? directory.Text;
             if (string.IsNullOrWhiteSpace(project.Text)) project.Text = parsed.Directory == null ? Path.GetFileNameWithoutExtension(path) : ProjectPaths.Name(parsed.Directory);
@@ -79,7 +84,9 @@ internal sealed class CaptureWindow : Form
     private void SaveSession()
     {
         if (string.IsNullOrWhiteSpace(project.Text) || string.IsNullOrWhiteSpace(command.Text)) { MessageBox.Show(this, "Enter a project name and resume command.", "Check the details"); return; }
-        Result = original with { Name = SessionNames.Clean(name.Text), Model = model.SelectedItem?.ToString() ?? "other", Project = project.Text.Trim(), ProjectDirectory = string.IsNullOrWhiteSpace(directory.Text) ? null : directory.Text.Trim(), Command = Commands.Canonicalize(command.Text), Note = note.Text,
+        var selected = model.SelectedItem?.ToString() ?? "other";
+        Result = original with { Name = SessionNames.Clean(name.Text), Model = selected == "Automatic" ? original.DetectedAssistant ?? original.Model : selected,
+            AssistantOverride = selected == "Automatic" || !editingExisting && selected == parsedModel ? null : selected, Project = project.Text.Trim(), ProjectDirectory = string.IsNullOrWhiteSpace(directory.Text) ? null : directory.Text.Trim(), Command = Commands.Canonicalize(command.Text), Note = note.Text,
             OriginOverride = source.SelectedItem?.ToString() == "Automatic" ? null : source.SelectedItem?.ToString() };
         DialogResult = DialogResult.OK; Close();
     }

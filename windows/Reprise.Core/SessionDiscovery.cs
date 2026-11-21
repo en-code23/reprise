@@ -50,6 +50,8 @@ public static class SessionDiscovery
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { warnings.Add($"The {model} metadata folder could not be read."); }
         }
+        var additional = AdditionalSessionDiscovery.Scan(home, environment);
+        sessions.AddRange(additional.Sessions); warnings.UnionWith(additional.Warnings);
         var unique = sessions.GroupBy(s => s.Identity, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.OrderBy(s => s.IsSubagent == true ? 1 : 0).ThenBy(s => s.HasLocalHistory == true ? 0 : 1).ThenByDescending(s => s.CreatedAt).First()).ToList();
         foreach (var session in unique.Where(s => s.Model == "codex"))
@@ -60,7 +62,7 @@ public static class SessionDiscovery
     public static Session? Parse(string data, string model, DateTimeOffset modified, bool includeSubagents = false)
     {
         string? id = null, directory = null; var origin = "Unknown"; var entrypoints = new HashSet<string>();
-        string? detectedName = null;
+        string? detectedName = null, recordedModel = null;
         var names = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var automaticNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var isSubagent = false; var classifiedClaudeConversation = false;
@@ -100,6 +102,8 @@ public static class SessionDiscovery
                     var candidate = Text(root, "sessionId");
                     if (id != null && candidate != null && id != candidate) continue;
                     id = candidate ?? id; directory = Text(root, "cwd") ?? directory;
+                    if (Text(root, "type") == "assistant" && root.TryGetProperty("message", out var message) && Text(message, "model") is { } modelName && modelName is not "<synthetic>" and not "synthetic") recordedModel = modelName;
+                    if (Text(root, "recordedModel") is { } tailModel) recordedModel = tailModel;
                     if (Text(root, "entrypoint") is { } entrypoint) entrypoints.Add(entrypoint);
                     if (Text(root, "type") == "custom-title" && candidate != null && SessionNames.Clean(Text(root, "customTitle")) is { } name) names[candidate] = name;
                     if (Text(root, "type") == "ai-title" && candidate != null && SessionNames.Clean(Text(root, "aiTitle")) is { } aiName) automaticNames[candidate] = aiName;
@@ -114,7 +118,7 @@ public static class SessionDiscovery
             if (id != null) detectedName = names.GetValueOrDefault(id) ?? automaticNames.GetValueOrDefault(id);
         }
         if (isSubagent && !includeSubagents || !Guid.TryParse(id, out _) || !ProjectPaths.IsWindowsAbsolute(directory)) return null;
-        return new Session { Model = model, Project = ProjectPaths.Name(directory), ProjectDirectory = directory, Command = Commands.Build(model, id!), CreatedAt = modified, DetectedAutomatically = true, DetectedOrigin = origin, DetectedName = detectedName, IsSubagent = isSubagent, HasLocalHistory = true };
+        return new Session { Model = model == "claude" ? Commands.RecordedProvider(recordedModel) ?? model : model, Project = ProjectPaths.Name(directory), ProjectDirectory = directory, Command = Commands.Build(model, id!), CreatedAt = modified, DetectedAutomatically = true, DetectedOrigin = origin, DetectedName = detectedName, IsSubagent = isSubagent, HasLocalHistory = true };
     }
     private static string Normalize(string? value) => (value ?? "").Trim().ToLowerInvariant().Replace('_', '-');
     public static string CodexOrigin(string? originator, string? source) => Normalize(originator) switch {

@@ -4,6 +4,7 @@ enum AssistantModel: String, Codable, CaseIterable, Identifiable, Hashable, Send
     case codex
     case claude
     case grok
+    case gemini, moonshot, deepseek, glm, antigravity, opencode
     case other
 
     var id: String { rawValue }
@@ -13,12 +14,21 @@ enum AssistantModel: String, Codable, CaseIterable, Identifiable, Hashable, Send
         case .codex: "Codex"
         case .claude: "Claude"
         case .grok: "Grok"
+        case .gemini: "Gemini"
+        case .moonshot: "Moonshot / Kimi"
+        case .deepseek: "DeepSeek"
+        case .glm: "GLM"
+        case .antigravity: "Antigravity"
+        case .opencode: "OpenCode"
         case .other: "Other"
         }
     }
 
     var commandName: String {
         switch self {
+        case .moonshot: "kimi"
+        case .antigravity: "agy"
+        case .deepseek, .glm: "opencode"
         case .other: "tool"
         default: rawValue
         }
@@ -29,8 +39,25 @@ enum AssistantModel: String, Codable, CaseIterable, Identifiable, Hashable, Send
         case .codex: "terminal.fill"
         case .claude: "sparkle"
         case .grok: "bolt.horizontal.fill"
+        case .gemini: "sparkles"
+        case .moonshot: "moon.fill"
+        case .deepseek: "water.waves"
+        case .glm: "cube.fill"
+        case .antigravity: "arrow.up.circle.fill"
+        case .opencode: "chevron.left.forwardslash.chevron.right"
         case .other: "chevron.right"
         }
+    }
+
+    var supportsManagedSessions: Bool { [.codex, .claude, .grok].contains(self) }
+
+    static func recordedProvider(_ value: String?) -> AssistantModel? {
+        guard let value = value?.lowercased() else { return nil }
+        if value.contains("deepseek") { return .deepseek }
+        if value.range(of: #"(?:^|[/_.:\s-])glm(?:$|[-_0-9.\s])"#, options: .regularExpression) != nil || ["zai", "z.ai", "zhipu", "zhipuai", "zai-coding-plan"].contains(value) { return .glm }
+        if value.contains("moonshot") || value.contains("kimi") { return .moonshot }
+        if value.contains("gemini") { return .gemini }
+        return nil
     }
 }
 
@@ -52,6 +79,8 @@ struct ResumeSession: Identifiable, Codable, Hashable, Sendable {
     var detectedName: String?
     var isSubagent: Bool?
     var hasLocalHistory: Bool?
+    var detectedAssistant: AssistantModel?
+    var assistantOverride: AssistantModel?
 
     init(
         id: UUID = UUID(),
@@ -75,10 +104,17 @@ struct ResumeSession: Identifiable, Codable, Hashable, Sendable {
         self.createdAt = createdAt
         self.sourceFileName = sourceFileName
         self.detectedAutomatically = detectedAutomatically
+        self.detectedAssistant = detectedAutomatically ? model : nil
     }
 
-    var identityKey: String { discoveryKey ?? "\(model.rawValue):\(CommandParser.canonicalize(command))" }
+    var identityKey: String {
+        discoveryKey ?? "\(CommandParser.client(command)?.rawValue ?? model.rawValue):\(CommandParser.canonicalize(command))"
+    }
     var origin: SessionOrigin { originOverride ?? detectedOrigin ?? .unknown }
+    var sourceLabel: String {
+        guard let client = CommandParser.client(command), client != model else { return origin.title }
+        return "\(client == .claude ? "Claude Code" : client.displayName) · \(origin.title)"
+    }
     var sessionIdentifier: String { command.split(separator: " ").last.map(String.init) ?? id.uuidString }
     var displayName: String { SessionName.clean(name) ?? SessionName.clean(detectedName) ?? "Session · \(sessionIdentifier.suffix(8))" }
 }
@@ -100,6 +136,16 @@ struct ParsedResumeCommand: Sendable {
 }
 
 enum CommandParser {
+    static let tools = "codex|claude|grok|gemini|kimi|agy|opencode"
+    static func client(_ command: String) -> AssistantModel? {
+        switch command.split(whereSeparator: \.isWhitespace).first?.lowercased() {
+        case "kimi": .moonshot
+        case "agy": .antigravity
+        case let tool?: AssistantModel(rawValue: tool)
+        default: nil
+        }
+    }
+
     static func parse(_ text: String) -> ParsedResumeCommand {
         let normalized = text
             .replacingOccurrences(of: "“", with: "\"")
@@ -110,7 +156,13 @@ enum CommandParser {
         let projectDirectory = detectProjectDirectory(in: normalized)
         let detectedModel: AssistantModel
 
-        if lower.contains("claude") || lower.contains("anthropic") {
+        if let provider = AssistantModel.recordedProvider(lower) {
+            detectedModel = provider
+        } else if lower.contains("antigravity") || lower.contains("agy ") {
+            detectedModel = .antigravity
+        } else if lower.contains("opencode") {
+            detectedModel = .opencode
+        } else if lower.contains("claude") || lower.contains("anthropic") {
             detectedModel = .claude
         } else if lower.contains("grok") || lower.contains("x.ai") {
             detectedModel = .grok
@@ -120,7 +172,7 @@ enum CommandParser {
             detectedModel = .other
         }
 
-        let pattern = #"(?i)(codex|claude|grok)\s+(?:--resume|resume)\s+[\"']?([A-Za-z0-9_./:@-]{6,})[\"']?"#
+        let pattern = "(?i)\\b(\(tools))\\s+(?:--resume|resume|--session|-s|-r|--conversation)\\s+[\"']?([A-Za-z0-9_-]{6,})[\"']?"
         if let expression = try? NSRegularExpression(pattern: pattern),
            let match = expression.firstMatch(
                in: normalized,
@@ -130,17 +182,18 @@ enum CommandParser {
            let idRange = Range(match.range(at: 2), in: normalized) {
             let tool = String(normalized[toolRange]).lowercased()
             let identifier = String(normalized[idRange])
-            let model = AssistantModel(rawValue: tool) ?? detectedModel
+            let client = client(tool) ?? .other
+            let model = [.opencode, .claude].contains(client) && AssistantModel.recordedProvider(lower) != nil ? detectedModel : client
             return ParsedResumeCommand(
                 model: model,
-                command: resumeCommand(model: model, identifier: identifier),
+                command: resumeCommand(model: client, identifier: identifier),
                 projectDirectory: projectDirectory,
                 wasDetected: true
             )
         }
 
         let fallbackPattern = #"(?i)(?:resume|session\s*id)\s*[:=#-]?\s*[\"']?([A-Za-z0-9_-]{8,})[\"']?"#
-        if detectedModel != .other,
+        if ![.other, .deepseek, .glm, .opencode].contains(detectedModel),
            let expression = try? NSRegularExpression(pattern: fallbackPattern),
            let match = expression.firstMatch(
                in: normalized,
@@ -166,7 +219,7 @@ enum CommandParser {
 
     static func canonicalize(_ command: String) -> String {
         let trimmed = command.trimmingCharacters(in: .whitespacesAndNewlines)
-        let pattern = #"(?i)^(codex|claude|grok)\s+(?:--resume|resume)\s+[\"']?([A-Za-z0-9_./:@-]+)[\"']?$"#
+        let pattern = "(?i)^(\(tools))\\s+(?:--resume|resume|--session|-s|-r|--conversation)\\s+[\"']?([A-Za-z0-9_-]+)[\"']?$"
         guard let expression = try? NSRegularExpression(pattern: pattern),
               let match = expression.firstMatch(
                   in: trimmed,
@@ -177,12 +230,19 @@ enum CommandParser {
             return trimmed
         }
 
-        let model = AssistantModel(rawValue: trimmed[toolRange].lowercased()) ?? .other
+        let model = client(String(trimmed[toolRange])) ?? .other
         return resumeCommand(model: model, identifier: String(trimmed[idRange]))
     }
 
     static func resumeCommand(model: AssistantModel, identifier: String) -> String {
-        "\(model.commandName) \(model == .codex || model == .other ? "resume" : "--resume") \(identifier)"
+        let flag: String
+        switch model {
+        case .codex, .other: flag = "resume"
+        case .moonshot, .opencode, .deepseek, .glm: flag = "--session"
+        case .antigravity: flag = "--conversation"
+        default: flag = "--resume"
+        }
+        return "\(model.commandName) \(flag) \(identifier)"
     }
 
     static func detectProjectDirectory(in text: String) -> String? {
@@ -205,8 +265,8 @@ enum CommandParser {
             let followingLine = lines[index + 1].lowercased()
             let isStandalonePath = (candidate.hasPrefix("/") || candidate.hasPrefix("~/"))
                 && !candidate.contains(where: { $0.isWhitespace })
-            let precedesResumeCommand = ["codex", "claude", "grok"].contains {
-                followingLine.contains($0) && followingLine.contains("resume")
+            let precedesResumeCommand = tools.split(separator: "|").contains {
+                followingLine.contains($0) && ["resume", "--session", "--conversation", "-s ", "-r "].contains(where: followingLine.contains)
             }
             if isStandalonePath && precedesResumeCommand {
                 return cleanDirectory(candidate)

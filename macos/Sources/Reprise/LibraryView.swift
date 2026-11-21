@@ -218,7 +218,8 @@ struct LibraryView: View {
                             .help("Opens the folder and copies this session’s resume command")
                     }.font(.system(size: 12))
                     if let editorStatus { Text(editorStatus).font(.system(size: 11)).foregroundStyle(.secondary) }
-                    if routing.preferences.enabled, project.directory != nil {
+                    if routing.preferences.enabled, project.directory != nil, session.model.supportsManagedSessions,
+                       CommandParser.client(session.command) == session.model {
                         ProjectRoutingView(routing: routing, session: session)
                     }
                     if session.hasLocalHistory == false {
@@ -241,7 +242,7 @@ struct LibraryView: View {
                             Image(systemName: item.model.symbol).foregroundStyle(item.model.tint).frame(width: 20)
                             VStack(alignment: .leading, spacing: 5) {
                                 Text(item.displayName).font(.system(size: 13, weight: .medium)).lineLimit(1).help(item.displayName)
-                                Text("\(item.model.displayName) · \(item.hasLocalHistory == false ? "History not local" : item.origin.title)").font(.system(size: 11)).foregroundStyle(.secondary)
+                                Text("\(item.model.displayName) · \(item.hasLocalHistory == false ? "History not local" : item.sourceLabel)").font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
                             }
                             Spacer(minLength: 12)
                             Text(item.createdAt, format: .dateTime.month(.abbreviated).day().hour().minute())
@@ -263,7 +264,7 @@ struct LibraryView: View {
                             Text(session.command).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
                                 .accessibilityIdentifier("session.command").frame(maxWidth: .infinity, alignment: .leading)
                             HStack {
-                                Text(session.origin.title).foregroundStyle(.secondary)
+                                Text(session.sourceLabel).foregroundStyle(.secondary)
                                 Spacer()
                                 Button("Edit details…") { editing = session }
                             }.font(.system(size: 12))
@@ -284,7 +285,7 @@ struct LibraryView: View {
         Menu {
             Button("Rename session…") { editing = session }
             Button("Edit details…") { editing = session }
-            if session.model != .other && session.isSubagent != true && session.hasLocalHistory != false {
+            if session.model.supportsManagedSessions && CommandParser.client(session.command) == session.model && session.isSubagent != true && session.hasLocalHistory != false {
                 Button("When this session finishes…") { finishTarget = FinishTarget(provider: session.model.rawValue, sessionId: session.sessionIdentifier) }
             }
             Button("Copy original CLI command") {
@@ -358,6 +359,13 @@ private struct SessionEditor: View {
                     .focused($nameFocused).accessibilityIdentifier("sessionEditor.name")
                 Text("Leave blank to use the imported name or session ID.").font(.caption).foregroundStyle(.secondary)
                 TextField("Project name", text: $session.project)
+                Picker("Assistant", selection: Binding(get: { session.assistantOverride }, set: {
+                    session.assistantOverride = $0
+                    session.model = $0 ?? session.detectedAssistant ?? session.model
+                })) {
+                    Text("Automatic (\((session.detectedAssistant ?? session.model).displayName))").tag(nil as AssistantModel?)
+                    ForEach(AssistantModel.allCases) { Text($0.displayName).tag(Optional($0)) }
+                }
                 Picker("Session source", selection: $session.originOverride) {
                     Text("Automatic (\((session.detectedOrigin ?? .unknown).title))").tag(nil as SessionOrigin?)
                     ForEach(SessionOrigin.allCases) { Text($0.title).tag(Optional($0)) }

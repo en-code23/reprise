@@ -46,7 +46,7 @@ final class RoutingStore: ObservableObject {
     }
 
     func refresh(_ provider: AssistantModel) async {
-        guard preferences.enabled, provider != .other, !refreshing.contains(provider) else { return }
+        guard preferences.enabled, provider.supportsManagedSessions, !refreshing.contains(provider) else { return }
         guard provider != .claude || claudeConnected else {
             states[provider] = ProviderRoutingState(provider: provider, status: "Connect Claude usage in Model selection settings."); return
         }
@@ -77,7 +77,7 @@ final class RoutingStore: ObservableObject {
     }
 
     func decision(for session: ResumeSession, refresh: Bool = false) async -> RoutingDecision? {
-        guard preferences.enabled, let directory = session.projectDirectory, session.model != .other,
+        guard preferences.enabled, let directory = session.projectDirectory, session.model.supportsManagedSessions,
               session.command.split(separator: " ").first.map(String.init) == session.model.rawValue,
               !preferences.disabledProjects.contains(ProjectLibrary.normalizedDirectory(directory) ?? directory) else { return nil }
         if refresh || (states[session.model]?.observedAt.map({ Date().timeIntervalSince($0) > 60 }) ?? true) ||
@@ -99,7 +99,7 @@ final class RoutingStore: ObservableObject {
     }
 
     func usesManagedSession(_ session: ResumeSession) -> Bool {
-        guard preferences.enabled, preferences.continuous, session.model != .other, let directory = session.projectDirectory,
+        guard preferences.enabled, preferences.continuous, session.model.supportsManagedSessions, let directory = session.projectDirectory,
               session.hasLocalHistory != false, UUID(uuidString: session.sessionIdentifier) != nil,
               session.command.split(separator: " ").first.map(String.init) == session.model.rawValue else { return false }
         return !preferences.disabledProjects.contains(ProjectLibrary.normalizedDirectory(directory) ?? directory)

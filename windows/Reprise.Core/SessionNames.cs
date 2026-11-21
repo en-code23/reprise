@@ -55,6 +55,7 @@ public static class SessionNames
                 if (!Guid.TryParse(Text(root, "sessionId"), out _)) continue;
                 var keys = new[] { "type", "sessionId", "cwd", "entrypoint", "isSidechain", "agentId", "customTitle", "aiTitle" };
                 var metadata = root.EnumerateObject().Where(p => keys.Contains(p.Name)).ToDictionary(p => p.Name, p => (object?)p.Value.Clone());
+                if (Text(root, "type") == "assistant" && root.TryGetProperty("message", out var message) && Text(message, "model") is { } model && model is not "<synthetic>" and not "synthetic") metadata["recordedModel"] = model[..Math.Min(model.Length, 200)];
                 foreach (var key in new[] { "customTitle", "aiTitle" })
                     if (Text(root, key) is { } name) metadata[key] = Clean(name);
                 titles.Append('\n').Append(JsonSerializer.Serialize(metadata));

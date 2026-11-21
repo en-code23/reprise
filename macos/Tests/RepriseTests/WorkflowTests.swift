@@ -194,10 +194,11 @@ final class WorkflowTests: XCTestCase {
     @MainActor func testLiveDiscoveryWhenRequested() throws {
         guard ProcessInfo.processInfo.environment["REPRISE_LIVE_DISCOVERY"] == "1" else { return }
         let result = SessionDiscovery.scan()
-        print("Discovered metadata: Codex=\(result.sessions.filter { $0.model == .codex }.count), Claude=\(result.sessions.filter { $0.model == .claude }.count), Grok=\(result.sessions.filter { $0.model == .grok }.count), warnings=\(result.warnings.count)")
+        for model in AssistantModel.allCases { print("Discovered \(model.displayName): \(result.sessions.filter { $0.model == model }.count)") }
+        print("Discovery warnings: \(result.warnings.count)")
         print("Imported session names: \(result.sessions.filter { $0.detectedName != nil }.count)")
         for origin in SessionOrigin.allCases { print("Recorded source \(origin.title): \(result.sessions.filter { $0.origin == origin }.count)") }
-        XCTAssertTrue(result.sessions.allSatisfy { $0.projectDirectory != nil && $0.discoveryKey != nil })
+        XCTAssertTrue(result.sessions.allSatisfy { $0.discoveryKey != nil })
         if let active = ProcessInfo.processInfo.environment["CODEX_THREAD_ID"] {
             let discovered = try XCTUnwrap(result.sessions.first { $0.model == .codex && $0.sessionIdentifier == active })
             XCTAssertNotEqual(discovered.isSubagent, true)

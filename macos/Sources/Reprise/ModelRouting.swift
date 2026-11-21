@@ -124,7 +124,7 @@ struct RoutingDecision: Codable, Equatable, Sendable {
         case .codex: return ["--model", model.id, "--config", "model_reasoning_effort=\"\(effort)\""]
         case .claude: return ["--model", model.id, "--effort", effort]
         case .grok: return ["--model", model.id, "--reasoning-effort", effort]
-        case .other: return []
+        default: return []
         }
     }
 }

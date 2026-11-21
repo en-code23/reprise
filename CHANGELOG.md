@@ -1,5 +1,12 @@
 # Release notes
 
+## 1.11.0
+
+- Add Gemini CLI, Moonshot/Kimi CLI, Kimi Code, Antigravity CLI, and OpenCode history detection on Mac and Windows, with native resume commands, copying, editor opening, assistant filters, and project grouping.
+- Cover older Gemini JSON and Kimi context files, current JSONL metadata, and both OpenCode database schemas plus pre-database JSON histories. Open databases read-only and keep metadata reads bounded.
+- Classify DeepSeek, GLM, Kimi, and Gemini from recorded OpenCode/Claude Code model fields while preserving the originating client. Model switches keep one conversation and preserve names, notes, and chosen folders.
+- Filter recorded subagents, avoid importing prompts or tool output, and retain sessions with unknown directories under Unassigned. Keep new clients on their native CLI rather than routing them through unsupported managed-session protocols.
+
 ## 1.8.0
 
 - Replace the three-column library with a native project list and full session history. Move preferences into a separate Settings window, keep Resume, Copy, and Open in editor together, and collapse technical details by default.

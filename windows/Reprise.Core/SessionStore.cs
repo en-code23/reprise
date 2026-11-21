@@ -66,6 +66,9 @@ public sealed class SessionStore
             Name = session.Id == Sessions[index].Id ? session.Name : session.Name ?? Sessions[index].Name,
             DetectedName = session.DetectedName ?? Sessions[index].DetectedName,
             IsSubagent = session.IsSubagent ?? Sessions[index].IsSubagent,
+            AssistantOverride = session.Id == Sessions[index].Id ? session.AssistantOverride : session.AssistantOverride ?? Sessions[index].AssistantOverride,
+            DetectedAssistant = session.DetectedAssistant ?? Sessions[index].DetectedAssistant,
+            Model = (session.Id == Sessions[index].Id ? session.AssistantOverride : session.AssistantOverride ?? Sessions[index].AssistantOverride) ?? session.Model,
             HasLocalHistory = session.HasLocalHistory ?? Sessions[index].HasLocalHistory };
         else Sessions.Add(session);
         Preferences.Dismissed.Remove(session.Identity);
@@ -77,9 +80,11 @@ public sealed class SessionStore
         {
             if (Preferences.Dismissed.Contains(session.Identity)) continue;
             var previous = Sessions.FirstOrDefault(s => s.Identity.Equals(session.Identity, StringComparison.OrdinalIgnoreCase));
-            if (previous == null) Sessions.Add(session);
+            if (previous == null) { session.DetectedAssistant = session.Model; Sessions.Add(session); }
             else
             {
+                previous.DetectedAssistant = session.Model;
+                previous.Model = previous.AssistantOverride ?? session.Model;
                 if (ProjectPaths.Normalize(previous.ProjectDirectory) == null && ProjectPaths.Normalize(session.ProjectDirectory) != null)
                 {
                     previous.ProjectDirectory = session.ProjectDirectory;

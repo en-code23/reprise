@@ -26,6 +26,7 @@ final class CaptureCoordinator: ObservableObject {
     private weak var store: SessionStore?
     private var sourceURL: URL?
     private var captureTask: Task<Void, Never>?
+    private var parsedModel: AssistantModel?
 
     init(store: SessionStore) {
         self.store = store
@@ -77,6 +78,7 @@ final class CaptureCoordinator: ObservableObject {
                 guard !Task.isCancelled else { return }
                 let parsed = CommandParser.parse(text)
                 model = parsed.model
+                parsedModel = parsed.model
                 command = parsed.command
                 projectDirectory = parsed.projectDirectory ?? ""
                 detectedAutomatically = parsed.wasDetected
@@ -110,6 +112,7 @@ final class CaptureCoordinator: ObservableObject {
             detectedAutomatically: detectedAutomatically
         )
         session.name = SessionName.clean(sessionName)
+        session.assistantOverride = model == parsedModel ? nil : model
         session.originOverride = originOverride
         store?.add(session)
         if store?.storageError == nil { reset() }
@@ -122,6 +125,7 @@ final class CaptureCoordinator: ObservableObject {
         if !keepingPhase { phase = .idle }
         previewImage = nil
         model = .codex
+        parsedModel = nil
         command = ""
         project = ""
         sessionName = ""

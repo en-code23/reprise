@@ -7,7 +7,7 @@
     <title>Reprise — Every project. One place to resume.</title>
     <meta
       name="description"
-      content="Native Mac and Windows apps that organise Codex, Claude, and Grok sessions by project. Find your folder, choose a session, and resume in your terminal."
+      content="Native Mac and Windows apps that organise coding sessions by project, including Codex, Claude, Gemini, Kimi, Antigravity, OpenCode, DeepSeek, and GLM."
     />
     <meta
       property="og:title"
@@ -126,7 +126,7 @@
           <span class="number">01 / COLLECT</span>
           <h2>It remembers<br />the sessions.</h2>
           <p>
-            Local Codex, Claude, and Grok Build sessions appear automatically
+            Local sessions from supported coding tools appear automatically
             while Reprise runs. Add a screenshot or paste a command for anything
             else.
           </p>
@@ -179,7 +179,7 @@
           <details>
             <summary>Can I name individual sessions?</summary>
             <p>
-              Yes. Reprise imports recorded Codex, Claude, and Grok titles when available.
+              Yes. Reprise imports recorded titles from supported coding tools when available.
               On Mac, right-click a session and choose Rename; on Windows, choose … → Rename / edit session.
               You can also enter a name while adding a screenshot or command. Names are
               shown in project history and stay saved when sessions sync. Clear your custom name to use
@@ -198,6 +198,16 @@
               Source labels come from local Codex and Claude metadata. Missing or
               ambiguous records stay Unknown; you can correct them in Session details.
               Regular cloud-only Claude chats are not imported. Resume uses your chosen terminal.
+            </p>
+          </details>
+          <details>
+            <summary>Which coding tools are detected automatically?</summary>
+            <p>
+              Codex, Claude Code, Grok Build, Gemini CLI, Moonshot/Kimi, Antigravity CLI,
+              and OpenCode. DeepSeek and GLM sessions are identified from recorded model
+              metadata in OpenCode or Claude Code and reopen through that same tool.
+              Browser-only chats are not imported. Missing project folders can be assigned
+              under Unassigned; each tool's CLI must be installed to resume.
             </p>
           </details>
           <details>

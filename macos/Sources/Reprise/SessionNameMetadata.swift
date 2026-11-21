@@ -40,6 +40,10 @@ enum SessionNameMetadata {
                   let id = object["sessionId"] as? String, UUID(uuidString: id) != nil else { continue }
             let keys = ["type", "sessionId", "cwd", "entrypoint", "isSidechain", "agentId", "customTitle", "aiTitle"]
             var metadata = object.filter { keys.contains($0.key) }
+            if object["type"] as? String == "assistant", let message = object["message"] as? [String: Any],
+               let model = message["model"] as? String, !["<synthetic>", "synthetic"].contains(model) {
+                metadata["recordedModel"] = String(model.prefix(200))
+            }
             if let name = metadata["customTitle"] as? String { metadata["customTitle"] = SessionName.clean(name) }
             if let name = metadata["aiTitle"] as? String { metadata["aiTitle"] = SessionName.clean(name) }
             titles.append(0x0A)

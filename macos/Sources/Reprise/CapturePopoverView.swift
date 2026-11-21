@@ -254,7 +254,7 @@ private struct DropTargetCard: View {
             VStack(spacing: 3) {
                 Text(isTargeted ? "Drop to read screenshot" : "Drop a terminal screenshot")
                     .font(.system(size: 13, weight: .semibold))
-                Text("Reprise detects Codex, Claude, and Grok commands.")
+                Text("Reprise detects resume commands from supported coding tools.")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }

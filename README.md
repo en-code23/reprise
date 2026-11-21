@@ -1,6 +1,6 @@
 # Reprise
 
-Reprise has native Mac menubar and Windows system-tray apps. It automatically collects local Codex, Claude, and Grok Build sessions, and turns terminal screenshots into an organized library of AI coding-session resume commands.
+Reprise has native Mac menubar and Windows system-tray apps. It automatically collects local Codex, Claude Code, Grok Build, Gemini CLI, Moonshot/Kimi, Antigravity CLI, and OpenCode sessions, and turns terminal screenshots into an organized library of AI coding-session resume commands. DeepSeek and GLM sessions are recognised from recorded model metadata in OpenCode and Claude Code.
 
 On Mac, drop a screenshot on the Reprise status icon. On Windows, add it through the tray menu or drop it into the library window. Local OCR detects commands such as:
 
@@ -8,6 +8,10 @@ On Mac, drop a screenshot on the Reprise status icon. On Windows, add it through
 codex resume session-id
 claude --resume session-id
 grok --resume session-id
+gemini --resume session-id
+kimi --session session-id
+agy --conversation session-id
+opencode --session session-id
 ```
 
 The app lets you review the detected assistant and command, add or detect the project directory, attach a project name and note, then copy the command later from a grouped local library. Screenshots are processed on-device and are never uploaded. Mac uses Apple Vision; Windows bundles Tesseract and an English OCR model.
@@ -18,7 +22,7 @@ Download **Reprise-win-Setup.exe** from the [latest release](https://github.com/
 
 The Windows app lives in the notification area/system tray. Click its icon to open the library; closing the window keeps it running. Use its tray menu to add a screenshot, or drop a PNG, JPG, BMP, or TIFF into the library/capture window. Windows does not support dropping files directly onto this tray icon. Review OCR results before saving, or enter a command manually.
 
-Windows groups sessions by Windows project directory, with Projects, Unassigned, and Internal views, assistant/source filters, notes, and history. It reads native Windows Codex, Claude, and Grok session metadata from your user profile, respecting `CODEX_HOME`, `CLAUDE_CONFIG_DIR`, and `GROK_HOME`. Linux/WSL transcript folders and cloud-only chat histories are not automatically imported.
+Windows groups sessions by Windows project directory, with Projects, Unassigned, and Internal views, assistant/source filters, notes, and history. It reads the supported tools' local metadata from your user profile, respecting the environment overrides listed below. Linux/WSL transcript folders and cloud-only chat histories are not automatically imported.
 
 Choose **Windows Terminal**, **PowerShell**, or **Command Prompt** as the default terminal. The relevant Windows CLI must be installed, on PATH, and signed in. Opening an editor accepts an editor `.exe`, opens the project folder, and copies the selected command. Installer builds support **Check for updates** through Velopack; portable copies are replaced manually. Windows updates use GitHub release packages and their checksums; the separate Mac feed uses Sparkle/Ed25519 signatures.
 
@@ -27,7 +31,7 @@ Windows sessions and preferences live in `%LOCALAPPDATA%\RepriseLibrary`, outsid
 Build on Windows with .NET 10, stable Rust, Python 3, and the Visual Studio C++ redistributable files available:
 
 ```powershell
-./scripts/build-windows.ps1 -Version 1.10.0
+./scripts/build-windows.ps1 -Version 1.11.0
 ```
 
 The script runs core checks, publishes a self-contained app, verifies its UI/OCR on Windows, and builds the installer and update packages with pinned Velopack tooling. `-TestInstaller` additionally installs and tests the package on a clean CI runner. Windows previews are saved under `build/windows/qa/`. Run the portable core checks on any .NET 10 host with `dotnet run --project windows/Reprise.Core.Tests -c Release`.
@@ -140,7 +144,26 @@ The release workflow requires the repository secret `SPARKLE_PRIVATE_KEY`. Keep 
 
 ## Automatic local discovery
 
-While Reprise is running, it scans `~/.codex/sessions`, `~/.codex/archived_sessions`, `~/.claude/projects`, and `~/.grok/sessions` at startup and every 30 seconds. `CODEX_HOME`, `CLAUDE_CONFIG_DIR`, and `GROK_HOME` are respected when present in the app's environment. Use **Sync now** for an immediate refresh, or turn off automatic discovery in **Settings**.
+While Reprise is running, it scans supported local session stores at startup and every 30 seconds. Use **Sync now** for an immediate refresh, or turn off automatic discovery in **Settings**. Environment overrides apply when present in Reprise's environment.
+
+| Tool | Local history | Resume command |
+| --- | --- | --- |
+| Codex | `~/.codex/sessions`, `archived_sessions`, newest `state_N.sqlite`; `CODEX_HOME` supported | `codex resume ID` |
+| Claude Code | `~/.claude/projects`; `CLAUDE_CONFIG_DIR` supported | `claude --resume ID` |
+| Grok Build | `~/.grok/sessions`; `GROK_HOME` supported | `grok --resume ID` |
+| Gemini CLI | `~/.gemini/tmp/*/chats/session-*.json` and `.jsonl`; project registry and `.project_root` markers; `GEMINI_CLI_HOME` changes the home containing `.gemini` | `gemini --resume ID` |
+| Moonshot / Kimi CLI | `~/.kimi/kimi.json` and `sessions`; `KIMI_SHARE_DIR` supported; includes older flat context files | `kimi --session ID` |
+| Kimi Code | `~/.kimi-code/sessions/*/*/state.json` and main-agent history; `KIMI_CODE_HOME` supported | `kimi --session ID` |
+| Antigravity CLI | `~/.gemini/antigravity-cli/conversation_summaries.db`, opened read-only | `agy --conversation ID` |
+| OpenCode | `~/.local/share/opencode/opencode.db` (both session tables) and older `storage/session` JSON; `XDG_DATA_HOME` supported | `opencode --session ID` |
+
+Gemini's sandbox cache under `~/.cache/.gemini` is also scanned. Hashed Gemini folders are matched through the project registry or their root marker; if no directory can be recovered, the session remains under **Unassigned** so you can choose its folder. Remote Antigravity workspaces are not treated as local folders. OpenCode's shared metadata and ambiguous Antigravity records keep the **Unknown** source label rather than guessing CLI versus app.
+
+**DeepSeek, GLM, Moonshot/Kimi, and Gemini in other clients:** OpenCode records the selected provider/model, and Claude Code records the model used for assistant replies. Reprise uses those fields to classify the session, while preserving the actual client's resume command. A GLM session from OpenCode resumes through `opencode`, for example. The client is shown alongside its source in session history. Changing models updates the same imported conversation and preserves your custom name, note, and chosen project folder. Reprise does not infer historical providers from today's API endpoint settings or invent standalone DeepSeek/GLM resume commands. Clients that store only generic model aliases cannot be classified reliably and retain their client label; you can select the assistant manually.
+
+These additions cover local coding histories, including tools you install later. They do not import browser-only Gemini, Kimi, DeepSeek, or GLM chats. Resume requires the corresponding CLI to be installed and signed in. Automatic model selection, managed sessions, and completion actions remain limited to their existing Codex, Claude, and Grok integrations; new clients use their native CLI.
+
+New metadata reads are bounded: 1 MB per metadata object, up to 16 MB for legacy Gemini JSON, the first and last 256 KB of JSONL indexes/events, and 5,000 rows per database session table. Only IDs, saved titles (Gemini's saved summary is used as its title), folders, activity times, and source/model metadata are retained. Message bodies, reasoning, tool output, credentials, and API keys are not saved. Confirmed child conversations and symlink entries are skipped. Unsupported, oversized, or incomplete files may be skipped until a later sync; original histories are never modified. See [Gemini session management](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/session-management.md), [Kimi CLI sessions](https://github.com/MoonshotAI/kimi-cli/blob/main/docs/en/guides/sessions.md), [Kimi Code sessions](https://github.com/MoonshotAI/kimi-code/blob/main/docs/en/guides/sessions.md), [Antigravity conversations](https://antigravity.google/docs/cli/conversations), and [OpenCode](https://opencode.ai/docs/cli/).
 
 Older Codex conversations are also found in the newest local `state_N.sqlite` history index, opened read-only and limited to 5,000 metadata rows. Reprise checks whether each referenced transcript exists. Missing transcripts remain visible as **History not local** references with Resume disabled. Reprise cannot reconstruct missing conversation files; open the conversation in Codex if available, then sync again.
 

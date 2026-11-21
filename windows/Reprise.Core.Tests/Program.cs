@@ -174,4 +174,5 @@ try
     Check(scan.Warnings.Count == 1, "Oversized summaries should be reported");
 }
 finally { if (Directory.Exists(temporary)) Directory.Delete(temporary, true); }
+passed += AdditionalDiscoveryChecks.Run();
 Console.WriteLine($"Passed {passed} Windows core checks.");

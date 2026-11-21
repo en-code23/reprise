@@ -11,6 +11,8 @@ public sealed record Session
     public string? DetectedName { get; set; }
     public bool? IsSubagent { get; set; }
     public bool? HasLocalHistory { get; set; }
+    public string? DetectedAssistant { get; set; }
+    public string? AssistantOverride { get; set; }
     public string? ProjectDirectory { get; set; }
     public string Note { get; set; } = "";
     public string Command { get; set; } = "";
@@ -20,7 +22,9 @@ public sealed record Session
     public string DetectedOrigin { get; set; } = "Unknown";
     public string? OriginOverride { get; set; }
     public string Origin => OriginOverride ?? DetectedOrigin;
-    public string Identity => Model.ToLowerInvariant() + ":" + Commands.Canonicalize(Command);
+    public string SourceLabel => Commands.Client(Command) is { } client && client != Model ?
+        (client switch { "claude" => "Claude Code", "opencode" => "OpenCode", "moonshot" => "Kimi", "antigravity" => "Antigravity", "gemini" => "Gemini", "codex" => "Codex", "grok" => "Grok", _ => client }) + " · " + Origin : Origin;
+    public string Identity => (Commands.Client(Command) ?? Model.ToLowerInvariant()) + ":" + Commands.Canonicalize(Command);
     [System.Text.Json.Serialization.JsonIgnore]
     public string SessionIdentifier => Command.Split(' ', StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? Id.ToString();
     [System.Text.Json.Serialization.JsonIgnore]
@@ -29,8 +33,27 @@ public sealed record Session
 
 public static class Commands
 {
-    private static readonly Regex Resume = new(@"\b(codex|claude|grok)\s+(?:--resume|resume)\s+[""']?([A-Za-z0-9_-]{6,})[""']?", RegexOptions.IgnoreCase);
-    public static string Build(string model, string identifier) => $"{model.ToLowerInvariant()} {(model.Equals("codex", StringComparison.OrdinalIgnoreCase) ? "resume" : "--resume")} {identifier}";
+    public static readonly string[] Models = ["codex", "claude", "grok", "gemini", "moonshot", "deepseek", "glm", "antigravity", "opencode", "other"];
+    private static readonly Regex Resume = new(@"\b(codex|claude|grok|gemini|kimi|agy|opencode)\s+(?:--resume|resume|--session|-s|-r|--conversation)\s+[""']?([A-Za-z0-9_-]{6,})[""']?", RegexOptions.IgnoreCase);
+    public static string? Client(string command) => command.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.ToLowerInvariant() switch {
+        "kimi" => "moonshot", "agy" => "antigravity", "codex" => "codex", "claude" => "claude", "grok" => "grok", "gemini" => "gemini", "opencode" => "opencode", _ => null
+    };
+    public static string Build(string model, string identifier)
+    {
+        model = model.ToLowerInvariant();
+        var tool = model switch { "moonshot" or "kimi" => "kimi", "antigravity" or "agy" => "agy", "glm" or "deepseek" => "opencode", _ => model };
+        var flag = tool switch { "codex" => "resume", "kimi" or "opencode" => "--session", "agy" => "--conversation", _ => "--resume" };
+        return $"{tool} {flag} {identifier}";
+    }
+    public static string? RecordedProvider(string? value)
+    {
+        value = value?.ToLowerInvariant();
+        if (value == null) return null;
+        if (value.Contains("deepseek")) return "deepseek";
+        if (Regex.IsMatch(value, @"(?:^|[/_.:\s-])glm(?:$|[-_0-9.\s])") || new[] { "zai", "z.ai", "zhipu", "zhipuai", "zai-coding-plan" }.Contains(value)) return "glm";
+        if (value.Contains("moonshot") || value.Contains("kimi")) return "moonshot";
+        return value.Contains("gemini") ? "gemini" : null;
+    }
     public static string Canonicalize(string command)
     {
         var match = Resume.Match(command.Trim());
@@ -41,7 +64,7 @@ public static class Commands
     {
         var normalized = text.Replace('“', '"').Replace('”', '"').Replace('‘', '\'').Replace('’', '\'');
         var match = Resume.Match(normalized);
-        var model = match.Success ? match.Groups[1].Value.ToLowerInvariant()
+        var model = match.Success ? Client(match.Groups[1].Value)!
             : normalized.Contains("claude", StringComparison.OrdinalIgnoreCase) ? "claude"
             : normalized.Contains("grok", StringComparison.OrdinalIgnoreCase) ? "grok" : "codex";
         string? folder = null;
@@ -52,15 +75,17 @@ public static class Commands
             candidate = candidate.TrimEnd('>', '$', '%', ' ').Trim('"', '\'');
             if (ProjectPaths.IsWindowsAbsolute(candidate)) { folder = candidate; break; }
         }
-        return (model, match.Success ? Build(model, match.Groups[2].Value) : "", folder);
+        var command = match.Success ? Build(model, match.Groups[2].Value) : "";
+        if (model is "claude" or "opencode") model = RecordedProvider(normalized) ?? model;
+        return (model, command, folder);
     }
     public static string[] ValidatedArguments(string command)
     {
         var parts = Canonicalize(command).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length != 3 || !new[] { "codex", "claude", "grok" }.Contains(parts[0]) ||
-            parts[1] != (parts[0] == "codex" ? "resume" : "--resume") ||
+        if (parts.Length != 3 || Client(parts[0]) is not { } client ||
+            Canonicalize(command) != Build(client, parts[2]) ||
             !Regex.IsMatch(parts[2], @"^[A-Za-z0-9][A-Za-z0-9_-]*$"))
-            throw new InvalidOperationException("Resume requires a Codex, Claude, or Grok command with a single session ID. Custom commands can still be copied.");
+            throw new InvalidOperationException("Resume requires a supported coding-tool command with a single session ID. Custom commands can still be copied.");
         return parts;
     }
     public static string PowerShellLiteral(string value) => "'" + value.Replace("'", "''") + "'";
@@ -94,7 +119,7 @@ public static class ProjectPaths
     }
     public static string Name(string? path) => path?.TrimEnd('\\', '/').Split('\\', '/').LastOrDefault() ?? "Untitled project";
     public static string Area(string? path) => Normalize(path) == null ? "Unassigned" :
-        path!.Replace('/', '\\').Split('\\').Any(p => new[] { ".codex", ".claude", ".grok", ".chatgpt" }.Contains(p.ToLowerInvariant())) ? "Internal" : "Projects";
+        path!.Replace('/', '\\').Split('\\').Any(p => new[] { ".codex", ".claude", ".grok", ".chatgpt", ".gemini", ".kimi", ".kimi-code", ".opencode" }.Contains(p.ToLowerInvariant())) ? "Internal" : "Projects";
 }
 
 public sealed record ProjectGroup(string Key, IReadOnlyList<Session> Sessions)

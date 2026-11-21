@@ -58,6 +58,9 @@ enum SessionDiscovery {
             ?? home.appendingPathComponent(".grok")
         let grok = GrokSessionDiscovery.scan(root: grokHome.appendingPathComponent("sessions"))
         result.sessions.append(contentsOf: grok.sessions)
+        let additional = AdditionalSessionDiscovery.scan(home: home, environment: environment)
+        result.sessions.append(contentsOf: additional.sessions)
+        result.warnings.append(contentsOf: additional.warnings)
         // An embedded child record must never hide a matching primary transcript.
         result.sessions = Dictionary(grouping: result.sessions, by: \.identityKey).values.compactMap { records in
             let primary = records.filter { $0.isSubagent != true }
@@ -84,6 +87,7 @@ enum SessionDiscovery {
         var automaticNames: [String: String] = [:]
         var isSubagent = false
         var classifiedClaudeConversation = false
+        var recordedModel: String?
         for line in data.split(separator: 0x0A) {
             guard let object = try? JSONSerialization.jsonObject(with: Data(line)) as? [String: Any] else { continue }
             if model == .codex, object["type"] as? String == "session_meta",
@@ -107,6 +111,10 @@ enum SessionDiscovery {
                     identifier = candidate
                 }
                 directory = object["cwd"] as? String ?? directory
+                if object["type"] as? String == "assistant",
+                   let message = object["message"] as? [String: Any], let model = message["model"] as? String,
+                   !["<synthetic>", "synthetic"].contains(model) { recordedModel = model }
+                if let model = object["recordedModel"] as? String { recordedModel = model }
                 if let entrypoint = object["entrypoint"] as? String { entrypoints.insert(entrypoint) }
                 if object["type"] as? String == "custom-title", let id = object["sessionId"] as? String {
                     names[id.lowercased()] = SessionName.clean(object["customTitle"] as? String)
@@ -132,6 +140,11 @@ enum SessionDiscovery {
         session.detectedName = names[identifier.lowercased()] ?? automaticNames[identifier.lowercased()]
         session.isSubagent = isSubagent
         session.hasLocalHistory = true
+        if model == .claude, let provider = AssistantModel.recordedProvider(recordedModel) {
+            session.model = provider
+            session.detectedAssistant = provider
+            session.sourceEvidence = (session.sourceEvidence ?? []) + ["client: Claude Code", "model: " + String((recordedModel ?? "").prefix(120))]
+        }
         return session
     }
 }
